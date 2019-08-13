@@ -8,7 +8,8 @@
   "scripts": {
     "test": "jest --config jestconfig.json",
     "clean": "rm -rf lib",
-    "build": "yarn clean && tsc"
+    "build": "yarn clean && tsc",
+    "ci": "yarn test && yarn build"
   },
   "peerDependencies": {
     "fp-ts": "^2.0.0"
