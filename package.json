@@ -1,0 +1,25 @@
+{
+  "name": "scrapql",
+  "version": "0.0.1",
+  "description": "",
+  "files": [
+    "lib/**/*"
+  ],
+  "scripts": {
+    "test": "jest --config jestconfig.json",
+    "clean": "rm -rf lib",
+    "build": "yarn clean && tsc"
+  },
+  "peerDependencies": {
+    "fp-ts": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.12",
+    "fp-ts": "^2.0.0",
+    "jest": "^24.8.0",
+    "monocle-ts": "^2.0.0",
+    "ts-jest": "^24.0.2",
+    "typescript": "^3.5.1"
+  },
+  "license": "UNLICENSED"
+}
