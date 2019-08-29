@@ -14,6 +14,12 @@ import { identity } from 'fp-ts/lib/function';
 export type ResultProcessor<A, R> = (a: A, r: R, ...c: Array<string>) => Task<void>;
 export type QueryProcessor<A, Q, R> = (a: A, q: Q, ...c: Array<string>) => Task<R>;
 
+// helper functions
+
+export const discard: ResultProcessor<unknown, unknown> = (_0, _1, ..._99) => Task_.of(undefined);
+export const replaceWith = <C>(constant: C): QueryProcessor<unknown, unknown, C> => (_0, _1, ..._99) =>
+  Task_.of(constant);
+
 // fields result contains part of the payload
 
 type FieldsReporterConnector<A, R> = (a: A) => (r: R, ...c: Array<string>) => Task<void>;
