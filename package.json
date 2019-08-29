@@ -9,7 +9,8 @@
     "test": "jest --config jestconfig.json",
     "clean": "rm -rf lib",
     "build": "yarn clean && tsc",
-    "ci": "yarn test && yarn build"
+    "ci": "yarn test && yarn build",
+    "deploy-npm": "yarn ci && yarn publish"
   },
   "peerDependencies": {
     "fp-ts": "^2.0.0"
