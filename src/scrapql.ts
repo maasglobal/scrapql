@@ -30,20 +30,13 @@ export function processResultFields<A, R>(connect: FieldsReporterConnector<A, R>
 
 // keys result contains data that always exists in database
 
-type SubResultProcessor<A, R extends Record<string, any>> = <I extends keyof R>(
-  a: A,
-  r: R[I],
-  i: I,
-  ...k: Array<string>
-) => Task<void>;
-
-export function processResultKeys<A, R extends Record<string, any>>(
-  subProcessor: SubResultProcessor<A, R>,
+export function processResultKeys<A, R extends Record<I, SR>, I extends string, SR>(
+  subProcessor: ResultProcessor<A, SR>,
 ): ResultProcessor<A, R> {
   return (reporters: A, result: R, ...context: Array<string>) => {
     const tasks: Array<Task<void>> = pipe(
       result,
-      Record_.mapWithIndex((key, subResult) => subProcessor(reporters, subResult, key, ...context)),
+      Record_.mapWithIndex((key: I, subResult: SR) => subProcessor(reporters, subResult, key, ...context)),
       Record_.toUnfoldable(array),
       Array_.map(([k, v]) => v),
     );
@@ -55,14 +48,14 @@ export function processResultKeys<A, R extends Record<string, any>>(
 
 type ExistenceReporterConnector<A> = (a: A) => (i: string, b: boolean) => Task<void>;
 
-export function processResultIds<A, R extends Record<string, Option<any>>>(
+export function processResultIds<A, R extends Record<I, Option<SR>>, I extends string, SR>(
   connect: ExistenceReporterConnector<A>,
-  subProcessor: SubResultProcessor<A, R>,
+  subProcessor: ResultProcessor<A, SR>,
 ): ResultProcessor<A, R> {
   return (reporters: A, result: R, ...context: Array<string>) => {
     const tasks: Array<Task<void>> = pipe(
       result,
-      Record_.mapWithIndex((id, maybeSubResult) => {
+      Record_.mapWithIndex((id: I, maybeSubResult: Option<SR>) => {
         return pipe(
           maybeSubResult,
           Option_.fold(
