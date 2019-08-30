@@ -106,9 +106,43 @@ describe('scrapql', () => {
     });
 
     it('should call other result processors based on property names', async () => {
-      await processor(nopReporters, results, ...exampleContext)();
+      const main = processor(nopReporters, results, ...exampleContext);
+      await main();
       expect(processor1.mock.calls).toMatchObject([[nopReporters, result1, ctx2, ctx1]]);
       expect(processor2.mock.calls).toMatchObject([]);
+    });
+  });
+
+  describe('combined result processor', () => {
+    const reporters = {
+      learnExistence: loggerTask(jest.fn((...largs: any): void => undefined)),
+      receiveData: loggerTask(jest.fn((...largs: any): void => undefined)),
+    };
+
+    const result1 = Symbol('result1');
+    const results = {
+      property1: {
+        id1: Option_.some({
+          key1: result1,
+        }),
+        id2: Option_.none,
+      },
+    };
+    const keyz = scrap.processResultKeys(
+      scrap.processResultFields((r: typeof reporters) => r.receiveData)
+    );
+    const processor = scrap.processResultProperties({
+      property1: scrap.processResultIds(
+        (r: typeof reporters) => r.learnExistence,
+        keyz
+      ),
+    });
+
+    it('should call stuff', async () => {
+      const main = processor(reporters, results);
+      await main();
+      expect(reporters.learnExistence.mock.calls).toMatchObject([['id1', true], ['id2', false]]);
+      expect(reporters.receiveData.mock.calls).toMatchObject([[result1, 'key1', 'id1']]);
     });
   });
 
@@ -147,7 +181,8 @@ describe('scrapql', () => {
     const processor = scrap.processQueryKeys(subProcessor);
 
     it('should call sub query processor for each query and return the results', async () => {
-      const got = await processor(nopResolvers, queries, ...exampleContext)();
+      const main = processor(nopResolvers, queries, ...exampleContext);
+      const got = await main();
       expect(subProcessor.mock.calls).toContainEqual([nopResolvers, query1, 'key1', ctx2, ctx1]);
       expect(subProcessor.mock.calls).toContainEqual([nopResolvers, query2, 'key2', ctx2, ctx1]);
       expect(subProcessor.mock.calls).toHaveLength(Object.keys(queries).length);
@@ -230,6 +265,54 @@ describe('scrapql', () => {
       const got = await main();
       expect(processor1.mock.calls).toMatchObject([[nopResolvers, query1, ctx2, ctx1]]);
       expect(processor2.mock.calls).toMatchObject([]);
+      expect(got).toMatchObject(results);
+    });
+  });
+
+  describe('combined query processor', () => {
+
+    const result1 = Symbol('result1');
+    const items: Record<string, any> = {
+      id1: Option_.some({
+        key1: result1,
+      }),
+      id2: Option_.none,
+    };
+    const results = {
+      property1: items,
+    }
+
+    const query = {
+      property1: {
+        id1: {
+          key1: true,
+        },
+        id2: {
+          key1: true,
+        },
+      },
+    };
+
+    const resolvers = {
+      checkExistence: loggerTask(jest.fn((id: string) => Option_.isSome(items[id]))),
+      fetchData: loggerTask(jest.fn((...largs: any) => result1)),
+    };
+
+    const keyz = scrap.processQueryKeys(
+      scrap.processQueryFields((r: typeof resolvers) => r.fetchData)
+    );
+    const processor = scrap.processQueryProperties({
+      property1: scrap.processQueryIds(
+        (r: typeof resolvers) => r.checkExistence,
+        keyz
+      ),
+    });
+
+    it('should call stuff', async () => {
+      const main = processor(resolvers, query);
+      const got = await main();
+      expect(resolvers.checkExistence.mock.calls).toMatchObject([['id1'], ['id2']]);
+      expect(resolvers.fetchData.mock.calls).toMatchObject([['key1', 'id1']]);
       expect(got).toMatchObject(results);
     });
   });
