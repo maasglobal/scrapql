@@ -128,13 +128,12 @@ describe('scrapql', () => {
         id2: Option_.none,
       },
     };
-    const keyz = scrap.processResultKeys(
-      scrap.processResultFields((r: typeof reporters) => r.receiveData)
-    );
     const processor = scrap.processResultProperties({
       property1: scrap.processResultIds(
         (r: typeof reporters) => r.learnExistence,
-        keyz
+        scrap.processResultKeys(
+          scrap.processResultFields((r: typeof reporters) => r.receiveData)
+        ),
       ),
     });
 
@@ -298,13 +297,12 @@ describe('scrapql', () => {
       fetchData: loggerTask(jest.fn((...largs: any) => result1)),
     };
 
-    const keyz = scrap.processQueryKeys(
-      scrap.processQueryFields((r: typeof resolvers) => r.fetchData)
-    );
     const processor = scrap.processQueryProperties({
       property1: scrap.processQueryIds(
         (r: typeof resolvers) => r.checkExistence,
-        keyz
+        scrap.processQueryKeys(
+          scrap.processQueryFields((r: typeof resolvers) => r.fetchData)
+        ),
       ),
     });
 
