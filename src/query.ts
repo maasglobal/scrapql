@@ -11,7 +11,6 @@ export type Context = Array<string>;
 export type QueryProcessor<Q, R> = (q: Q, ...c: Context) => Task<R>;
 export type QueryProcessorFactory<A, Q, R> = (a: A) => QueryProcessor<Q, R>;
 
-
 // literal query contains static information that can be replaced with another literal
 
 export function literal<A, Q, R>(constant: R): QueryProcessorFactory<A, Q, R> {
@@ -33,11 +32,12 @@ export function leaf<A, R>(connect: LeafQueryConnector<A, R>): QueryProcessorFac
 export function keys<A, Q extends Record<I, SQ>, I extends string, SQ, SR>(
   subProcessor: QueryProcessorFactory<A, SQ, SR>,
 ): QueryProcessorFactory<A, Q, Record<I, SR>> {
-  return (resolvers: A) => (query: Q, ...context: Context): Task<Record<I, SR>> => pipe(
-    query,
-    Record_.mapWithIndex((id: I, subQuery: SQ): Task<SR> => subProcessor(resolvers)(subQuery, id, ...context)),
-    Record_.sequence(task),
-  );
+  return (resolvers: A) => (query: Q, ...context: Context): Task<Record<I, SR>> =>
+    pipe(
+      query,
+      Record_.mapWithIndex((id: I, subQuery: SQ): Task<SR> => subProcessor(resolvers)(subQuery, id, ...context)),
+      Record_.sequence(task),
+    );
 }
 
 // keys query requests some information that may not be present in database
@@ -76,17 +76,11 @@ export function ids<A, Q extends Record<I, SQ>, I extends string, SQ, SR>(
 
 // properties query contains optional queries that may or may not be present
 
-export type QueryProcessorFactoryMapping<
-  A,
-  Q,
-  R,
-> = { [I in keyof Q & keyof R]: QueryProcessorFactory<A, Required<Q>[I], Required<R>[I]> };
+export type QueryProcessorFactoryMapping<A, Q, R> = {
+  [I in keyof Q & keyof R]: QueryProcessorFactory<A, Required<Q>[I], Required<R>[I]>;
+};
 
-export function properties<
-  A,
-  Q,
-  R,
->(processors: QueryProcessorFactoryMapping<A, Q, R>): QueryProcessorFactory<A, Q, R> {
+export function properties<A, Q, R>(processors: QueryProcessorFactoryMapping<A, Q, R>): QueryProcessorFactory<A, Q, R> {
   return (resolvers: A) => <P extends string & keyof Q & keyof R>(query: Q, ...context: Context): Task<R> => {
     const tasks: Record<P, Task<R[P]>> = pipe(
       query,
@@ -97,7 +91,7 @@ export function properties<
       }),
     );
     const result: Task<Record<P, R[P]>> = Record_.sequence(task)(tasks);
-    
+
     return result as Task<R>;
   };
 }
