@@ -1,13 +1,11 @@
 import { Task } from 'fp-ts/lib/Task';
-import * as Task_ from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/lib/pipeable';
 
 import { name, version } from '../../package.json';
 
 import * as scrapqlResult from '../result';
-import { ResultProcessor, ResultProcessorFactory, ResultProcessorFactoryMapping } from '../result';
+import { ResultProcessorFactory } from '../result';
 
 interface Logger<R, A extends Array<any>> {
   (...a: A): R;
@@ -28,13 +26,12 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 }
 
 describe('result', () => {
-
   interface Reporters {
     learnProperty1Existence: (...largs: any) => Task<void>;
     receiveKeyResult: (...largs: any) => Task<void>;
     receiveProperty2Result: (...largs: any) => Task<void>;
   }
-  
+
   function createReporters(): Reporters {
     return {
       learnProperty1Existence: loggerTask(jest.fn((...largs: any) => undefined)),
@@ -43,9 +40,8 @@ describe('result', () => {
     };
   }
 
-  type RPF<R> = ResultProcessorFactory<Reporters, R>
+  type RPF<R> = ResultProcessorFactory<Reporters, R>;
 
-  const QUERY = `${name}/${version}/scrapql/test/query`;
   const RESULT = `${name}/${version}/scrapql/test/result`;
 
   type Id = string;
@@ -64,7 +60,7 @@ describe('result', () => {
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
-  type KeysResult = Record<Key, KeyResult>; 
+  type KeysResult = Record<Key, KeyResult>;
   const keysResult: KeysResult = {
     key1: key1Result,
   };
@@ -79,20 +75,18 @@ describe('result', () => {
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
-  type Property1Result = Record<Id, Option<KeysResult>>
+  type Property1Result = Record<Id, Option<KeysResult>>;
   const property1Result: Property1Result = {
     id1: Option_.some(keysResult),
     id2: Option_.none,
   };
-  const processProperty1: RPF<Property1Result> = scrapqlResult.ids(
-    (r) => r.learnProperty1Existence,
-    processKeys,
-  );
+  const processProperty1: RPF<Property1Result> = scrapqlResult.ids((r) => r.learnProperty1Existence, processKeys);
 
   it('processProperty1', async () => {
     const reporters = createReporters();
     const main = processProperty1(reporters)(property1Result);
     await main();
+    // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1', true], ['id2', false]]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([[key1Result, 'key1', 'id1']]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
@@ -112,9 +106,9 @@ describe('result', () => {
   });
 
   type RootResult = Partial<{
-    protocol: typeof RESULT
-    property1: Property1Result
-    property2: Property2Result
+    protocol: typeof RESULT;
+    property1: Property1Result;
+    property2: Property2Result;
   }>;
   const rootResult: RootResult = {
     protocol: RESULT,
@@ -130,6 +124,7 @@ describe('result', () => {
     const reporters = createReporters();
     const main = processRoot(reporters)(rootResult);
     await main();
+    // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1', true], ['id2', false]]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([[key1Result, 'key1', 'id1']]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
@@ -140,18 +135,16 @@ describe('result', () => {
       protocol: scrapqlResult.literal(),
       property1: scrapqlResult.ids(
         (r: Reporters) => r.learnProperty1Existence,
-        scrapqlResult.keys(
-          scrapqlResult.leaf((r: Reporters) => r.receiveKeyResult)
-        ),
+        scrapqlResult.keys(scrapqlResult.leaf((r: Reporters) => r.receiveKeyResult)),
       ),
-      property2: scrapqlResult.leaf((r: Reporters) => r.receiveProperty2Result)
+      property2: scrapqlResult.leaf((r: Reporters) => r.receiveProperty2Result),
     });
     const reporters = createReporters();
     const main = processRoot(reporters)(rootResult);
     await main();
+    // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1', true], ['id2', false]]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([[key1Result, 'key1', 'id1']]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
-
 });
