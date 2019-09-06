@@ -1,9 +1,13 @@
 import { Task } from 'fp-ts/lib/Task';
 import * as Task_ from 'fp-ts/lib/Task';
+import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as processQuery from '../query';
+import { name, version } from '../../package.json';
+
+import * as scrapqlQuery from '../query';
+import { QueryProcessor, QueryProcessorFactory, QueryProcessorFactoryMapping } from '../query';
 
 interface Logger<R, A extends Array<any>> {
   (...a: A): R;
@@ -15,209 +19,170 @@ interface LoggerTask<R, A extends Array<any>> {
 }
 
 function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R, A> {
-  const task: LoggerTask<R, A> = (...largs) => () => {
+  const lt: LoggerTask<R, A> = (...largs) => () => {
     return Promise.resolve(logger(...largs));
   };
   // eslint-disable-next-line fp/no-mutation
-  task.mock = logger.mock;
-  return task;
+  lt.mock = logger.mock;
+  return lt;
 }
 
 describe('query', () => {
-  const nopResolvers = Symbol('resolvers');
-  const nopProcessor = (...rargs: any) => Task_.of(undefined);
-  const nopProcessorFactory = () => nopProcessor;
-  const ctx2 = 'ctx2';
-  const ctx1 = 'ctx1';
-  const exampleContext = [ctx2, ctx1];
 
-  describe('literal processor', () => {
-    const result = Symbol('result');
-    const query: unknown = undefined;
-    const processor = processQuery.literal(result)(nopResolvers);
-    it('should return the predetermined result', async () => {
-      const main = processor(query, ...exampleContext);
-      const got = await main();
-      expect(got).toEqual(result);
-    });
+  interface Resolvers {
+    checkProperty1Existence: (id: string) => Task<boolean>;
+    fetchKeyResult: (...largs: any) => Task<KeyResult>;
+    fetchProperty2Result: (...largs: any) => Task<Property2Result>;
+  }
+  
+  function createResolvers(): Resolvers {
+    return {
+      checkProperty1Existence: loggerTask(jest.fn((id: string) => Option_.isSome(property1Result[id]))),
+      fetchKeyResult: loggerTask(jest.fn((...largs: any) => key1Result)),
+      fetchProperty2Result: loggerTask(jest.fn((...largs: any) => property2Result)),
+    };
+  }
+
+  type QPF<Q, R> = QueryProcessorFactory<Resolvers, Q, R>
+
+  const QUERY = `${name}/${version}/scrapql/test/query`;
+  const RESULT = `${name}/${version}/scrapql/test/result`;
+
+  type Id = string;
+  type Key = string;
+
+  type KeyResult = string;
+  type KeyQuery = true;
+  const key1Result: KeyResult = 'result1';
+  const key1Query: KeyQuery = true;
+  const processKey: QPF<KeyQuery, KeyResult> = scrapqlQuery.leaf((r) => r.fetchKeyResult);
+
+  it('processKey', async () => {
+    const resolvers = createResolvers();
+    const main = processKey(resolvers)(key1Query);
+    const result = await main();
+    expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([[]]);
+    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
+    expect(result).toEqual(key1Result);
   });
 
-  describe('leaf processor', () => {
-    const result = Symbol('result');
-    const resolvers = {
-      resolveQuery: loggerTask(jest.fn((...largs: any) => result)),
-    };
-    const query = true;
-    const processor = processQuery.leaf((r: typeof resolvers) => r.resolveQuery)(resolvers);
-    it('should call sub query resolver and return the result', async () => {
-      const main = processor(query, ...exampleContext);
-      const got = await main();
-      expect(resolvers.resolveQuery.mock.calls).toMatchObject([[ctx2, ctx1]]);
-      expect(got).toEqual(result);
-    });
+  type KeysResult = Record<Key, KeyResult>; 
+  type KeysQuery = Record<Key, KeyQuery>;
+  const keysResult: KeysResult = {
+    key1: key1Result,
+  };
+  const keysQuery: KeysQuery = {
+    key1: key1Query,
+  };
+  const processKeys: QPF<KeysQuery,KeysResult> = scrapqlQuery.keys(processKey);
+
+  it('processKeys', async () => {
+    const resolvers = createResolvers();
+    const main = processKeys(resolvers)(keysQuery);
+    const result = await main();
+    expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([['key1']]);
+    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
+    expect(result).toEqual(keysResult);
   });
 
-  describe('keys processor', () => {
-    const result1 = Symbol('result1');
-    const result2 = Symbol('result2');
-    const results: Record<string, any> = {
-      key1: result1,
-      key2: result2,
-    };
-    type KeysQuery = Record<string, any>;
-    const query1 = Symbol('query1');
-    const query2 = Symbol('query2');
-    const queries: KeysQuery = {
-      key1: query1,
-      key2: query2,
-    };
+  type Property1Result = Record<Id, Option<KeysResult>>
+  type Property1Query = Record<Id, KeysQuery>
+  const property1Result: Property1Result = {
+    id1: Option_.some(keysResult),
+    id2: Option_.none,
+  };
+  const property1Query: Property1Query = {
+    id1: keysQuery,
+    id2: keysQuery,
+  };
+  const processProperty1: QPF<Property1Query, Property1Result> = scrapqlQuery.ids(
+    (r) => r.checkProperty1Existence,
+    processKeys,
+  );
 
-    const subProcessor = loggerTask(
-      jest.fn((query: KeysQuery, key: keyof KeysQuery, ...exampleContext) => results[key]),
-    );
-    const subProcessorFactory = jest.fn(() => subProcessor);
-    const processor = processQuery.keys(subProcessorFactory)(nopResolvers);
-
-    it('should call sub query processor for each query and return the results', async () => {
-      const main = processor(queries, ...exampleContext);
-      const got = await main();
-      expect(subProcessorFactory.mock.calls).toContainEqual([nopResolvers]);
-      expect(subProcessor.mock.calls).toContainEqual([query1, 'key1', ctx2, ctx1]);
-      expect(subProcessor.mock.calls).toContainEqual([query2, 'key2', ctx2, ctx1]);
-      expect(subProcessor.mock.calls).toHaveLength(Object.keys(queries).length);
-      expect(got).toMatchObject(results);
-    });
+  it('processProperty1', async () => {
+    const resolvers = createResolvers();
+    const main = processProperty1(resolvers)(property1Query);
+    const result = await main();
+    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1'], ['id2']]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([['key1', 'id1']]);
+    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
+    expect(result).toEqual(property1Result);
   });
 
-  describe('ids processor', () => {
-    const result1 = Symbol('result1');
-    const results: Record<string, any> = {
-      id1: Option_.some(result1),
-      id2: Option_.none,
-    };
-    type IdsQuery = Record<string, any>;
-    const query1 = Symbol('query1');
-    const query2 = Symbol('query2');
-    const queries: IdsQuery = {
-      id1: query1,
-      id2: query2,
-    };
-    const resolvers = {
-      existence: loggerTask(jest.fn((id: string) => Option_.isSome(results[id]))),
-    };
-    const subProcessor = loggerTask(
-      jest.fn((query: IdsQuery, id: keyof IdsQuery, ...exampleContext) =>
-        pipe(
-          results[id],
-          Option_.getOrElse(() => null),
+  type Property2Result = string;
+  type Property2Query = true;
+  const property2Result: Property2Result = 'result2';
+  const property2Query: Property2Query = true;
+  const processProperty2: QPF<Property2Query, Property2Result> = scrapqlQuery.leaf((r) => r.fetchProperty2Result);
+
+  it('processProperty2', async () => {
+    const resolvers = createResolvers();
+    const main = processProperty2(resolvers)(property2Query);
+    const result = await main();
+    expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([]);
+    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([[]]);
+    expect(result).toEqual(property2Result);
+  });
+
+  type RootResult = Partial<{
+    protocol: typeof RESULT
+    property1: Property1Result
+    property2: Property2Result
+  }>;
+  type RootQuery = Partial<{
+    protocol: typeof QUERY
+    property1: Property1Query
+    property2: Property2Query
+  }>;
+  const rootResult: RootResult = {
+    protocol: RESULT,
+    property1: property1Result,
+  };
+  const rootQuery: RootQuery = {
+    protocol: QUERY,
+    property1: property1Query,
+  };
+
+  it('processRoot (composed)', async () => {
+    const processRoot: QPF<RootQuery, RootResult> = scrapqlQuery.properties({
+      protocol: scrapqlQuery.literal(RESULT),
+      property1: processProperty1,
+      property2: processProperty2,
+    });
+
+    const resolvers = createResolvers();
+    const main = processRoot(resolvers)(rootQuery);
+    const result = await main();
+    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1'], ['id2']]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([['key1', 'id1']]);
+    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
+    expect(result).toEqual(rootResult);
+  });
+
+  it('processRoot (standalone)', async () => {
+
+    const processRoot = scrapqlQuery.properties({
+      protocol: scrapqlQuery.literal(RESULT),
+      property1: scrapqlQuery.ids(
+        (r: Resolvers) => r.checkProperty1Existence,
+        scrapqlQuery.keys(
+          scrapqlQuery.leaf((r: Resolvers) => r.fetchKeyResult)
         ),
       ),
-    );
-    const subProcessorFactory = jest.fn(() => subProcessor);
-
-    it('should call existence check for each query', async () => {
-      const processor = processQuery.ids((r: typeof resolvers) => r.existence, nopProcessorFactory)(resolvers);
-      const main = processor(queries, ...exampleContext);
-      await main();
-      expect(resolvers.existence.mock.calls).toContainEqual(['id1']);
-      expect(resolvers.existence.mock.calls).toContainEqual(['id2']);
-      expect(resolvers.existence.mock.calls).toHaveLength(Object.keys(queries).length);
+      property2: scrapqlQuery.leaf((r: Resolvers) => r.fetchProperty2Result)
     });
 
-    it('should call sub query processor for some queries', async () => {
-      const processor = processQuery.ids((r: typeof resolvers) => r.existence, subProcessorFactory)(resolvers);
-      const main = processor(queries, ...exampleContext);
-      const got = await main();
-      expect(subProcessorFactory.mock.calls).toMatchObject([[resolvers]]);
-      expect(subProcessor.mock.calls).toMatchObject([[query1, 'id1', ctx2, ctx1]]);
-      expect(got).toMatchObject(results);
-    });
+    const resolvers = createResolvers();
+    const main = processRoot(resolvers)(rootQuery);
+    const result = await main();
+    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1'], ['id2']]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([['key1', 'id1']]);
+    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
+    expect(result).toEqual(rootResult);
   });
 
-  describe('properties processor', () => {
-    const result1 = Symbol('result1');
-    const result2 = Symbol('result2');
-    type Result = Partial<{
-      readonly property1: typeof result1;
-      readonly property2: typeof result2;
-    }>;
-    const results: Result = {
-      property1: result1,
-    };
-    const query1 = Symbol('query1');
-    const query2 = Symbol('query2');
-    type Query = Partial<{
-      readonly property1: typeof query1;
-      readonly property2: typeof query2;
-    }>;
-    const queries: Query = {
-      property1: query1,
-    };
-    const processor1 = loggerTask(jest.fn((...largs: any): typeof result1 => result1));
-    const processor2 = loggerTask(jest.fn((...largs: any): typeof result2 => result2));
-    const factory1 = jest.fn(() => processor1);
-    const factory2 = jest.fn(() => processor2);
-
-    const processor = processQuery.properties({
-      property1: factory1,
-      property2: factory2,
-    })(nopResolvers);
-
-    it('should call other query processors based on present properties', async () => {
-      const main = processor(queries, ...exampleContext);
-      const got = await main();
-      expect(factory1.mock.calls).toMatchObject([[nopResolvers]]);
-      expect(factory2.mock.calls).toMatchObject([]);
-      expect(processor1.mock.calls).toMatchObject([[query1, ctx2, ctx1]]);
-      expect(processor2.mock.calls).toMatchObject([]);
-      expect(got).toMatchObject(results);
-    });
-  });
-
-  describe('processor combination', () => {
-
-    const result1 = Symbol('result1');
-    const items: Record<string, any> = {
-      id1: Option_.some({
-        key1: result1,
-      }),
-      id2: Option_.none,
-    };
-    const results = {
-      property1: items,
-    }
-
-    const query = {
-      property1: {
-        id1: {
-          key1: true,
-        },
-        id2: {
-          key1: true,
-        },
-      },
-    };
-
-    const resolvers = {
-      checkExistence: loggerTask(jest.fn((id: string) => Option_.isSome(items[id]))),
-      fetchData: loggerTask(jest.fn((...largs: any) => result1)),
-    };
-
-    const processor = processQuery.properties({
-      property1: processQuery.ids(
-        (r: typeof resolvers) => r.checkExistence,
-        processQuery.keys(
-          processQuery.leaf((r: typeof resolvers) => r.fetchData)
-        ),
-      ),
-    })(resolvers);
-
-    it('should call stuff', async () => {
-      const main = processor(query);
-      const got = await main();
-      expect(resolvers.checkExistence.mock.calls).toMatchObject([['id1'], ['id2']]);
-      expect(resolvers.fetchData.mock.calls).toMatchObject([['key1', 'id1']]);
-      expect(got).toMatchObject(results);
-    });
-  });
 });

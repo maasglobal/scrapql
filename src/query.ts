@@ -7,21 +7,25 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 // all processors share these generic processor types
 
-export type QueryProcessor<Q, R> = (q: Q, ...c: Array<string>) => Task<R>;
+export type Context = Array<string>;
+export type QueryProcessor<Q, R> = (q: Q, ...c: Context) => Task<R>;
 export type QueryProcessorFactory<A, Q, R> = (a: A) => QueryProcessor<Q, R>;
 
-// helper functions
 
-export function literal<C>(constant: C): QueryProcessorFactory<unknown, unknown, C> {
-  return (_0,) => (_1, ..._99) => Task_.of(constant);
+// literal query contains static information that can be replaced with another literal
+
+export function literal<A, Q, R>(constant: R): QueryProcessorFactory<A, Q, R> {
+  return (_0) => (query: Q, ..._99: Context) => {
+    return Task_.of(constant);
+  };
 }
 
 // leaf query contains information for retrieving a payload
 
-export type LeafQueryConnector<A, R> = (a: A) => (...k: Array<string>) => Task<R>;
+export type LeafQueryConnector<A, R> = (a: A) => (...k: Context) => Task<R>;
 
 export function leaf<A, R>(connect: LeafQueryConnector<A, R>): QueryProcessorFactory<A, true, R> {
-  return (resolvers) => (query, ...context) => connect(resolvers)(...context);
+  return (resolvers) => (query: true, ...context: Context): Task<R> => connect(resolvers)(...context);
 }
 
 // keys query requests some information that is always present in database
@@ -29,14 +33,11 @@ export function leaf<A, R>(connect: LeafQueryConnector<A, R>): QueryProcessorFac
 export function keys<A, Q extends Record<I, SQ>, I extends string, SQ, SR>(
   subProcessor: QueryProcessorFactory<A, SQ, SR>,
 ): QueryProcessorFactory<A, Q, Record<I, SR>> {
-  return (resolvers: A) => (query: Q, ...context: Array<string>) => {
-    const result: Task<Record<I, SR>> = pipe(
-      query,
-      Record_.mapWithIndex((id: I, subQuery: SQ): Task<SR> => subProcessor(resolvers)(subQuery, id, ...context)),
-      Record_.sequence(task),
-    );
-    return result;
-  };
+  return (resolvers: A) => (query: Q, ...context: Context): Task<Record<I, SR>> => pipe(
+    query,
+    Record_.mapWithIndex((id: I, subQuery: SQ): Task<SR> => subProcessor(resolvers)(subQuery, id, ...context)),
+    Record_.sequence(task),
+  );
 }
 
 // keys query requests some information that may not be present in database
@@ -47,7 +48,7 @@ export function ids<A, Q extends Record<I, SQ>, I extends string, SQ, SR>(
   connect: ExistenceCheckConnector<A>,
   subProcessor: QueryProcessorFactory<A, SQ, SR>,
 ): QueryProcessorFactory<A, Q, Record<I, Option<SR>>> {
-  return (resolvers: A) => (query: Q, ...context: Array<string>) => {
+  return (resolvers: A) => (query: Q, ...context: Context) => {
     const tasks: Record<I, Task<Option<SR>>> = pipe(
       query,
       Record_.mapWithIndex(
@@ -77,18 +78,16 @@ export function ids<A, Q extends Record<I, SQ>, I extends string, SQ, SR>(
 
 export type QueryProcessorFactoryMapping<
   A,
-  Q extends Record<string, any>,
-  R extends Record<keyof Q, any>,
-  P extends keyof Q & keyof R
-> = Record<P, QueryProcessorFactory<A, Q[P], R[P]>>;
+  Q,
+  R,
+> = { [I in keyof Q & keyof R]: QueryProcessorFactory<A, Required<Q>[I], Required<R>[I]> };
 
 export function properties<
   A,
-  Q extends Record<string, any>,
-  R extends Record<keyof Q, any>,
-  P extends string & keyof Q & keyof R
->(processors: QueryProcessorFactoryMapping<A, Q, R, P>): QueryProcessorFactory<A, Q, Record<P, R[P]>> {
-  return (resolvers: A) => (query: Q, ...context: Array<string>) => {
+  Q,
+  R,
+>(processors: QueryProcessorFactoryMapping<A, Q, R>): QueryProcessorFactory<A, Q, R> {
+  return (resolvers: A) => <P extends string & keyof Q & keyof R>(query: Q, ...context: Context): Task<R> => {
     const tasks: Record<P, Task<R[P]>> = pipe(
       query,
       Record_.mapWithIndex((property, subQuery: Q[P]) => {
@@ -97,6 +96,8 @@ export function properties<
         return subResult;
       }),
     );
-    return Record_.sequence(task)(tasks);
+    const result: Task<Record<P, R[P]>> = Record_.sequence(task)(tasks);
+    
+    return result as Task<R>;
   };
 }

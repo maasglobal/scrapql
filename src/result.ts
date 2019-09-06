@@ -11,18 +11,19 @@ import { identity } from 'fp-ts/lib/function';
 
 // all processors share these generic processor types
 
-export type ResultProcessor<R> = (r: R, ...c: Array<string>) => Task<void>;
+export type Context = Array<string>;
+export type ResultProcessor<R> = (r: R, ...c: Context) => Task<void>;
 export type ResultProcessorFactory<A, R> = (a: A) => ResultProcessor<R>;
 
 // helper functions
 
 export function literal(): ResultProcessorFactory<unknown, unknown> {
-  return (_0) => (_1, ..._99) => Task_.of(undefined);
+  return (_0) => (r, ..._99) => Task_.of(undefined);
 }
 
 // leaf result contains part of the payload
 
-export type LeafReporterConnector<A, R> = (a: A) => (r: R, ...c: Array<string>) => Task<void>;
+export type LeafReporterConnector<A, R> = (a: A) => (r: R, ...c: Context) => Task<void>;
 
 export function leaf<A, R>(connect: LeafReporterConnector<A, R>): ResultProcessorFactory<A, R> {
   return (reporters) => (result, ...context) => connect(reporters)(result, ...context);
@@ -33,7 +34,7 @@ export function leaf<A, R>(connect: LeafReporterConnector<A, R>): ResultProcesso
 export function keys<A, R extends Record<I, SR>, I extends string, SR>(
   subProcessor: ResultProcessorFactory<A, SR>,
 ): ResultProcessorFactory<A, R> {
-  return (reporters: A) => (result: R, ...context: Array<string>) => {
+  return (reporters: A) => (result: R, ...context: Context) => {
     const tasks: Array<Task<void>> = pipe(
       result,
       Record_.mapWithIndex((key: I, subResult: SR) => subProcessor(reporters)(subResult, key, ...context)),
@@ -52,7 +53,7 @@ export function ids<A, R extends Record<I, Option<SR>>, I extends string, SR>(
   connect: ExistenceReporterConnector<A>,
   subProcessor: ResultProcessorFactory<A, SR>,
 ): ResultProcessorFactory<A, R> {
-  return (reporters: A) => (result: R, ...context: Array<string>) => {
+  return (reporters: A) => (result: R, ...context: Context) => {
     const tasks: Array<Task<void>> = pipe(
       result,
       Record_.mapWithIndex((id: I, maybeSubResult: Option<SR>) => {
@@ -74,18 +75,21 @@ export function ids<A, R extends Record<I, Option<SR>>, I extends string, SR>(
 
 // properties result contains results for a set of optional queries
 
-export type ResultProcessorFactoryMapping<A, R, P extends keyof R> = Record<P, ResultProcessorFactory<A, R[P]>>
+export type ResultProcessorFactoryMapping<A, R> = {[I in keyof Required<R>]: ResultProcessorFactory<A, Required<R>[I]>}
 
-export function properties<A, R, P extends string & keyof R>(
-  processors: ResultProcessorFactoryMapping<A, R, P>,
+export function properties<A, R>(
+  processors: ResultProcessorFactoryMapping<A, R>,
 ): ResultProcessorFactory<A, R> {
-  return (reporters: A) => (result: R, ...context: Array<string>) => {
-    const tasks: Array<Task<void>> = pipe(
+  return (reporters: A) => <P extends string & keyof R>(result: R, ...context: Context): Task<void> => {
+    const taskRecord: Record<P, Task<void>> = pipe(
       result,
-      Record_.mapWithIndex((property: P, subResult: R[P]) => {
+      Record_.mapWithIndex((property, subResult: R[P]) => {
         const processor = processors[property];
         return processor(reporters)(subResult, ...context);
       }),
+    );
+    const tasks: Array<Task<void>> = pipe(
+      taskRecord,
       Record_.toUnfoldable(array),
       Array_.map(([k, v]) => v),
     );
