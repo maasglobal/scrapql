@@ -35,5 +35,8 @@
     "ts-jest": "^24.0.2",
     "typescript": "^3.5.1"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "typescript-tuple": "^2.2.1"
+  }
 }
