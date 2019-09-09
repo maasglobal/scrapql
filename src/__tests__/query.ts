@@ -35,7 +35,9 @@ describe('query', () => {
   function createResolvers(): Resolvers {
     /* eslint-disable @typescript-eslint/no-use-before-define */
     return {
-      checkProperty1Existence: loggerTask(jest.fn((id: string) => Option_.isSome(property1Result[id]))),
+      checkProperty1Existence: loggerTask(
+        jest.fn((id: string) => Option_.isSome(property1Result[id])),
+      ),
       fetchKeyResult: loggerTask(jest.fn((...largs: any) => key1Result)),
       fetchProperty2Result: loggerTask(jest.fn((...largs: any) => property2Result)),
     };
@@ -105,7 +107,10 @@ describe('query', () => {
     const main = processProperty1(resolvers)(property1Query);
     const result = await main();
     // eslint-disable-next-line fp/no-mutating-methods
-    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1'], ['id2']]);
+    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([
+      ['id1'],
+      ['id2'],
+    ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([['key1', 'id1']]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(property1Result);
@@ -115,7 +120,9 @@ describe('query', () => {
   type Property2Query = true;
   const property2Result: Property2Result = 'result2';
   const property2Query: Property2Query = true;
-  const processProperty2: QPF<Property2Query, Property2Result> = scrapqlQuery.leaf((r) => r.fetchProperty2Result);
+  const processProperty2: QPF<Property2Query, Property2Result> = scrapqlQuery.leaf(
+    (r) => r.fetchProperty2Result,
+  );
 
   it('processProperty2', async () => {
     const resolvers = createResolvers();
@@ -158,7 +165,10 @@ describe('query', () => {
     const result = await main();
 
     // eslint-disable-next-line fp/no-mutating-methods
-    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1'], ['id2']]);
+    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([
+      ['id1'],
+      ['id2'],
+    ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([['key1', 'id1']]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(rootResult);
@@ -178,7 +188,10 @@ describe('query', () => {
     const main = processRoot(resolvers)(rootQuery);
     const result = await main();
     // eslint-disable-next-line fp/no-mutating-methods
-    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1'], ['id2']]);
+    expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([
+      ['id1'],
+      ['id2'],
+    ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([['key1', 'id1']]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(rootResult);
