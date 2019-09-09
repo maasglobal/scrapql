@@ -29,7 +29,7 @@ module.exports = {
     'prettier/prettier': [
       1,
       {
-        printWidth: 120,
+        printWidth: 90,
         singleQuote: true,
         trailingComma: 'all',
         arrowParens: 'always',

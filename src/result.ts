@@ -25,7 +25,9 @@ export function literal(): ResultProcessorFactory<unknown, unknown> {
 
 export type LeafReporterConnector<A, R> = (a: A) => (r: R, ...c: Context) => Task<void>;
 
-export function leaf<A, R>(connect: LeafReporterConnector<A, R>): ResultProcessorFactory<A, R> {
+export function leaf<A, R>(
+  connect: LeafReporterConnector<A, R>,
+): ResultProcessorFactory<A, R> {
   return (reporters) => (result, ...context) => connect(reporters)(result, ...context);
 }
 
@@ -37,7 +39,9 @@ export function keys<A, R extends Record<I, SR>, I extends string, SR>(
   return (reporters: A) => (result: R, ...context: Context) => {
     const tasks: Array<Task<void>> = pipe(
       result,
-      Record_.mapWithIndex((key: I, subResult: SR) => subProcessor(reporters)(subResult, key, ...context)),
+      Record_.mapWithIndex((key: I, subResult: SR) =>
+        subProcessor(reporters)(subResult, key, ...context),
+      ),
       Record_.toUnfoldable(array),
       Array_.map(([k, v]) => v),
     );
@@ -47,7 +51,9 @@ export function keys<A, R extends Record<I, SR>, I extends string, SR>(
 
 // ids result contains data that may not exist in database
 
-export type ExistenceReporterConnector<A> = (a: A) => (i: string, b: boolean) => Task<void>;
+export type ExistenceReporterConnector<A> = (
+  a: A,
+) => (i: string, b: boolean) => Task<void>;
 
 export function ids<A, R extends Record<I, Option<SR>>, I extends string, SR>(
   connect: ExistenceReporterConnector<A>,
@@ -61,7 +67,10 @@ export function ids<A, R extends Record<I, Option<SR>>, I extends string, SR>(
           maybeSubResult,
           Option_.fold(
             () => [connect(reporters)(id, false)],
-            (subResult) => [connect(reporters)(id, true), subProcessor(reporters)(subResult, id, ...context)],
+            (subResult) => [
+              connect(reporters)(id, true),
+              subProcessor(reporters)(subResult, id, ...context),
+            ],
           ),
         );
       }),
@@ -79,8 +88,13 @@ export type ResultProcessorFactoryMapping<A, R> = {
   [I in keyof Required<R>]: ResultProcessorFactory<A, Required<R>[I]>;
 };
 
-export function properties<A, R>(processors: ResultProcessorFactoryMapping<A, R>): ResultProcessorFactory<A, R> {
-  return (reporters: A) => <P extends string & keyof R>(result: R, ...context: Context): Task<void> => {
+export function properties<A, R>(
+  processors: ResultProcessorFactoryMapping<A, R>,
+): ResultProcessorFactory<A, R> {
+  return (reporters: A) => <P extends string & keyof R>(
+    result: R,
+    ...context: Context
+  ): Task<void> => {
     const taskRecord: Record<P, Task<void>> = pipe(
       result,
       Record_.mapWithIndex((property, subResult: R[P]) => {

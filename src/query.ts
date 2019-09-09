@@ -23,8 +23,11 @@ export function literal<A, Q, R>(constant: R): QueryProcessorFactory<A, Q, R> {
 
 export type LeafQueryConnector<A, R> = (a: A) => (...k: Context) => Task<R>;
 
-export function leaf<A, R>(connect: LeafQueryConnector<A, R>): QueryProcessorFactory<A, true, R> {
-  return (resolvers) => (query: true, ...context: Context): Task<R> => connect(resolvers)(...context);
+export function leaf<A, R>(
+  connect: LeafQueryConnector<A, R>,
+): QueryProcessorFactory<A, true, R> {
+  return (resolvers) => (query: true, ...context: Context): Task<R> =>
+    connect(resolvers)(...context);
 }
 
 // keys query requests some information that is always present in database
@@ -35,7 +38,10 @@ export function keys<A, Q extends Record<I, SQ>, I extends string, SQ, SR>(
   return (resolvers: A) => (query: Q, ...context: Context): Task<Record<I, SR>> =>
     pipe(
       query,
-      Record_.mapWithIndex((id: I, subQuery: SQ): Task<SR> => subProcessor(resolvers)(subQuery, id, ...context)),
+      Record_.mapWithIndex(
+        (id: I, subQuery: SQ): Task<SR> =>
+          subProcessor(resolvers)(subQuery, id, ...context),
+      ),
       Record_.sequence(task),
     );
 }
@@ -80,8 +86,13 @@ export type QueryProcessorFactoryMapping<A, Q, R> = {
   [I in keyof Q & keyof R]: QueryProcessorFactory<A, Required<Q>[I], Required<R>[I]>;
 };
 
-export function properties<A, Q, R>(processors: QueryProcessorFactoryMapping<A, Q, R>): QueryProcessorFactory<A, Q, R> {
-  return (resolvers: A) => <P extends string & keyof Q & keyof R>(query: Q, ...context: Context): Task<R> => {
+export function properties<A, Q, R>(
+  processors: QueryProcessorFactoryMapping<A, Q, R>,
+): QueryProcessorFactory<A, Q, R> {
+  return (resolvers: A) => <P extends string & keyof Q & keyof R>(
+    query: Q,
+    ...context: Context
+  ): Task<R> => {
     const tasks: Record<P, Task<R[P]>> = pipe(
       query,
       Record_.mapWithIndex((property, subQuery: Q[P]) => {

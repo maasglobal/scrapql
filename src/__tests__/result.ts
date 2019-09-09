@@ -71,7 +71,9 @@ describe('result', () => {
     const main = processKeys(reporters)(keysResult);
     await main();
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
-    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([[key1Result, 'key1']]);
+    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
+      [key1Result, 'key1'],
+    ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
@@ -80,21 +82,31 @@ describe('result', () => {
     id1: Option_.some(keysResult),
     id2: Option_.none,
   };
-  const processProperty1: RPF<Property1Result> = scrapqlResult.ids((r) => r.learnProperty1Existence, processKeys);
+  const processProperty1: RPF<Property1Result> = scrapqlResult.ids(
+    (r) => r.learnProperty1Existence,
+    processKeys,
+  );
 
   it('processProperty1', async () => {
     const reporters = createReporters();
     const main = processProperty1(reporters)(property1Result);
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
-    expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1', true], ['id2', false]]);
-    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([[key1Result, 'key1', 'id1']]);
+    expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
+      ['id1', true],
+      ['id2', false],
+    ]);
+    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
+      [key1Result, 'key1', 'id1'],
+    ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
   type Property2Result = string;
   const property2Result: Property2Result = 'result2';
-  const processProperty2: RPF<Property2Result> = scrapqlResult.leaf((r) => r.receiveProperty2Result);
+  const processProperty2: RPF<Property2Result> = scrapqlResult.leaf(
+    (r) => r.receiveProperty2Result,
+  );
 
   it('processProperty2', async () => {
     const reporters = createReporters();
@@ -102,7 +114,9 @@ describe('result', () => {
     await main();
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([]);
-    expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([[property2Result]]);
+    expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([
+      [property2Result],
+    ]);
   });
 
   type RootResult = Partial<{
@@ -125,8 +139,13 @@ describe('result', () => {
     const main = processRoot(reporters)(rootResult);
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
-    expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1', true], ['id2', false]]);
-    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([[key1Result, 'key1', 'id1']]);
+    expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
+      ['id1', true],
+      ['id2', false],
+    ]);
+    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
+      [key1Result, 'key1', 'id1'],
+    ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
@@ -143,8 +162,13 @@ describe('result', () => {
     const main = processRoot(reporters)(rootResult);
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
-    expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([['id1', true], ['id2', false]]);
-    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([[key1Result, 'key1', 'id1']]);
+    expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
+      ['id1', true],
+      ['id2', false],
+    ]);
+    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
+      [key1Result, 'key1', 'id1'],
+    ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 });
