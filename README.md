@@ -11,50 +11,50 @@ customers and profit reports.  We will use the following database mock
 throughout the tutorial.
 
 ```typescript
-const example = {
+const example: any = {
   customers: {
-    'c001': {
+    c001: {
       name: 'Scrooge McDuck',
       age: '75',
     },
-    'c002': {
+    c002: {
       name: 'Magica De Spell',
       age: '35',
-    }
+    },
   },
   reports: {
-    '2017': {
+    2017: {
       profit: 500,
-    }
-    '2018': {
+    },
+    2018: {
       profit: 100,
     },
-    '2019': {
+    2019: {
       profit: 10,
-    }
+    },
   },
 };
 
 type Json = unknown;
 
-interface DB {
-  isKnownCustomer: (c: string) => Promise<boolean>;
+interface Database {
+  hasCustomer: (c: string) => Promise<boolean>;
   getCustomer: (c: string) => Promise<Json>;
   getReport: (y: string) => Promise<Json>;
 }
 
-const db: DB = {
-  hasCustomer: (customerId) => Promise.resolve(example.customers.hasOwnPropert(customerID)),
+const db: Database = {
+  hasCustomer: (customerId) => Promise.resolve(example.customers.hasOwnProperty(customerId)),
   getCustomer: (customerId) => Promise.resolve(example.customers[customerId]),
-  getReport: (year) => Promise.resolve(example.reports[year]||{ profit: 0 }),
-}
+  getReport: (year) => Promise.resolve(example.reports[year] || { profit: 0 }),
+};
 ```
 
 
 ## Define Data Validators
 
 ```typescript
-import * as t from 'io-ts'
+import * as t from 'io-ts';
 
 const CustomerId = t.string;
 type CustomerId = t.TypeOf<typeof CustomerId>;
@@ -80,16 +80,17 @@ type Errors = t.TypeOf<typeof Errors>;
 ## Define Query Validator
 
 ```typescript
-package = 'scrapql-example-app';  // from package.json
-version = '0.0.1';                // from package.json
+// name and version from package.json
+const packageName = 'scrapql-example-app';
+const packageVersion = '0.0.1';
 
-const QUERY_PROTOCOL= `${packge}/${version}/scrapql/query`;
+const QUERY_PROTOCOL= `${packageName}/${packageVersion}/scrapql/query`;
 
 const Query = t.type({
   protocol: t.literal(QUERY_PROTOCOL),
   get: t.type({
-    reports: t.record(Year, Report)),
-    customers: t.record(CustomerId, Customer)),
+    reports: t.record(Year, Report),
+    customers: t.record(CustomerId, Customer),
   }),
 });
 export type Query = t.TypeOf<typeof Query>;
@@ -113,7 +114,6 @@ interface Resolvers {
 }
 
 const resolvers: Resolvers = {
-
   fetchReport: (year) => pipe(
     () => db.getReport(year),
     Task_.map(Report.decode),
@@ -122,7 +122,7 @@ const resolvers: Resolvers = {
 
   fetchCustomer: (customerId) => pipe(
     () => db.getCustomer(customerId),
-    Task_.map(CustomerDecode.decode),
+    Task_.map(Customer.decode),
     TaskEither_.mapLeft(failure),
   ),
 
@@ -137,22 +137,25 @@ const resolvers: Resolvers = {
 ## Define Query Processor
 
 ```typescript
-import { process } from 'scrapql';
+import { init, process } from './scrapql';
 
-const RESULT_PROTOCOL = `${packge}/${version}/scrapql/result`;
+const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
-const processQuery = process.query.properties({
-  protocol: process.query.literal(RESULT_PROTOCOL),
-  get: process.query.properties({
-    reports: process.query.keys(
-      process.query.leaf((r: Resolvers) => r.fetchReport)
-    ),
-    customers: process.query.ids(
-      (r: Resolvers) => r.checkCustomerExistence,
-      process.query.leaf((r: Resolvers) => r.fetchCustomer)
-    ),
+const processQuery = init(
+  process.query.properties<Resolvers, Query, Result, []>({
+    protocol: process.query.literal(RESULT_PROTOCOL),
+    get: process.query.properties({
+      reports: process.query.keys(
+        process.query.leaf((r: Resolvers) => r.fetchReport)
+      ),
+      customers: process.query.ids(
+        (r: Resolvers) => r.checkCustomerExistence,
+        process.query.leaf((r: Resolvers) => r.fetchCustomer),
+      ),
+    }),
   }),
-})(resolvers);
+  resolvers,
+);
 ```
 
 ## Running The Query Processor
@@ -166,11 +169,11 @@ const query: Json = {
   get: {
     reports: {
       2018: true,
-      3030: true,   
+      3030: true,
     },
     customers: {
-      'c002': true,
-      'c007': true,
+      c002: true,
+      c007: true,
     },
   },
 };
@@ -191,7 +194,7 @@ should look as follows. The top level wrapper contains the result of the query
 decode and should return `left` in case of an invalid query.
 
 ```typescript
-{
+const result: Json = {
   _tag: 'Right',
   right: {
     protocol: 'scrapql-example-app/0.0.1/scrapql/result',
@@ -221,7 +224,7 @@ decode and should return `left` in case of an invalid query.
 
 ```typescript
 import { option as tOption } from 'io-ts-types/lib/option';
-import { option as tEither } from 'io-ts-types/lib/option';
+import { either as tEither } from 'io-ts-types/lib/either';
 
 const Result = t.type({
   protocol: t.literal(RESULT_PROTOCOL),
@@ -236,27 +239,31 @@ export type Result = t.TypeOf<typeof Result>;
 ## Define Result Reporters
 
 ```typescript
+import { Either } from 'fp-ts/lib/Either';
+import { Option } from 'fp-ts/lib/Option';
+import * as Either_ from 'fp-ts/lib/Either';
+
 interface Reporters {
-  readonly receiveReport: (a: Either<Errors, Report>, b: Year) => Task<void>;
-  readonly receiveCustomer: (a: Either<Errors, Option<Customer>>, b: CustomerId) => Task<void>;
+  readonly receiveReport: (a: Year, b: Either<Errors, Report>) => Task<void>;
+  readonly receiveCustomer: (a: CustomerId, b: Either<Errors, Option<Customer>>) => Task<void>;
   readonly learnCustomerExistence: (a: CustomerId, b: boolean) => Task<void>;
 }
 
 const reporters: Reporters = {
 
-  receiveReport: (result, year) => pipe(
+  receiveReport: (year, result) => pipe(
     result,
     Either_.fold(
-      (errors) => () => Promise.resolve(console.error(year, errors))
-      (report) => () => Promise.resolve(console.log(year, report))
+      (errors) => () => Promise.resolve(console.error(year, errors)),
+      (report) => () => Promise.resolve(console.log(year, report)),
     ),
   ),
 
-  receiveCustomer: (result, customerId) => pipe(
+  receiveCustomer: (customerId, result) => pipe(
     result,
     Either_.fold(
-      (errors) => () => Promise.resolve(console.error(customerId, errors))
-      (customer) => () => Promise.resolve(console.log(customerId, customer))
+      (errors) => () => Promise.resolve(console.error(customerId, errors)),
+      (customer) => () => Promise.resolve(console.log(customerId, customer)),
     ),
   ),
 
@@ -293,24 +300,31 @@ Now that we have a query processor we can finally use it to process queries.
 The query processor works as follows.
 
 ```typescript
+import * as IOEither_ from 'fp-ts/lib/IOEither';
 
 async function server(request: string): Promise<string> {
   const main = pipe(
-    TaskEither_.tryCatch(() => request, (reason) => [String(reason)]),
-    TaskEither_.chain((body) => Either.parseJSON(body, (reason) => [String(reason)]),
-    TaskEither_.chain((json) => pipe(
+    IOEither_.tryCatch(() => request, (reason: unknown) => [String(reason)]),
+    TaskEither_.fromIOEither,
+    TaskEither_.chain((body: string) => pipe(
+      Either_.parseJSON(body, (reason) => [String(reason)]),
+      TaskEither_.fromEither,
+    )),
+    (x: TaskEither<Array<string>,unknown>) => x,
+    TaskEither_.chain((json: unknown) => pipe(
       json,
       Query.decode,
       Either_.mapLeft(failure),
+      TaskEither_.fromEither,
     )),
-    TaskEither_.chain(processQuery),
+    TaskEither_.chain((query: Query) => processQuery(query)),
     Task_.map((payload) => pipe(
-      Either_.stringify(payload, (reason) => String(reason)),
+      Either_.stringifyJSON(payload, (reason) => String(reason)),
     )),
     TaskEither_.fold(
-      (errorString) => errorString,
-      (jsonString) => jsonString,
-    )
+      (errorString) => Task_.of(errorString),
+      (jsonString) => Task_.of(jsonString),
+    ),
   );
   return main();
 }
@@ -322,16 +336,19 @@ async function client(query: Query): Promise<void> {
     TaskEither_.chain((requestBody) => pipe(
       TaskEither_.tryCatch(() => server(requestBody), (reason) => [String(reason)]),
     )),
-    TaskEither_.tryCatch(() => result, (reason) => [String(reason)]),
-    TaskEither_.chain((body) => Either.parseJSON(body, (reason) => [String(reason)]),
-    TaskEither_.chain((json) => pipe(
+    TaskEither_.chain((body: string) => pipe(
+       Either_.parseJSON(body, (reason) => [String(reason)]),
+      TaskEither_.fromEither,
+    )),
+    TaskEither_.chain((json: unknown) => pipe(
       json,
       Result.decode,
       Either_.mapLeft(failure),
+      TaskEither_.fromEither,
     )),
     TaskEither_.fold(
       (errors) => () => Promise.resolve(console.error(errors)),
-      processResult,
+      (result: Result) => processResult(result),
     ),
   );
   return main();
