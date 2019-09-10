@@ -11,40 +11,56 @@ import { pipe } from 'fp-ts/lib/pipeable';
 import { identity } from 'fp-ts/lib/function';
 
 import * as Tuple_ from './tuple';
-import { Build, ResultProcessor, Context } from './types';
+import {
+  Build,
+  Result,
+  ResultProcessor,
+  Context,
+  ReporterConnector,
+  ReporterAPI,
+  ResultProcessorBuilderMapping,
+} from './scrapql';
 
 // helper functions
 
-export function literal<A, R, C extends Context>(): Build<ResultProcessor<R>, A, C> {
+function reporterArgsFrom<R extends Result, C extends Context>(
+  context: C,
+  result: R,
+): Concat<Reverse<C>, [R]> {
+  return pipe(
+    context,
+    Tuple_.reverse,
+    Tuple_.concat([result] as [R]),
+  );
+}
+
+// literal result is known on forehand so we throw it away
+
+export function literal<
+  A extends ReporterAPI,
+  R extends Result,
+  C extends Context
+>(): Build<ResultProcessor<R>, A, C> {
   return (_0: A) => (_1: C) => (_3: R) => Task_.of(undefined);
 }
 
 // leaf result contains part of the payload
 
-export type LeafReporterConnector<A, R, C extends Context> = (
-  a: A,
-) => (...a: Concat<Reverse<C>, [R]>) => Task<void>;
-
-export function leaf<A, R, C extends Context>(
-  connect: LeafReporterConnector<A, R, C>,
+export function leaf<A extends ReporterAPI, R extends Result, C extends Context>(
+  connect: ReporterConnector<A, R, C>,
 ): Build<ResultProcessor<R>, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
-    const g: Concat<Reverse<C>, [R]> = pipe(
-      context,
-      Tuple_.reverse,
-      Tuple_.concat([result] as [R]),
-    );
-    return connect(reporters)(...g);
+    return connect(reporters)(...reporterArgsFrom(context, result));
   };
 }
 
 // keys result contains data that always exists in database
 
 export function keys<
-  A,
-  R extends Record<string, SR>,
+  A extends ReporterAPI,
+  R extends Result & Record<string, SR>,
   I extends string & keyof R,
-  SR,
+  SR extends Result,
   C extends Context
 >(
   subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, I>>,
@@ -68,18 +84,14 @@ export function keys<
 
 // ids result contains data that may not exist in database
 
-export type ExistenceReporterConnector<A, I extends string> = (
-  a: A,
-) => (i: I, b: boolean) => Task<void>;
-
 export function ids<
-  A,
-  R extends Record<string, Option<SR>>,
+  A extends ReporterAPI,
+  R extends Result & Record<string, Option<SR>>,
   I extends string & keyof R,
-  SR,
+  SR extends Result,
   C extends Context
 >(
-  connect: ExistenceReporterConnector<A, I>,
+  connect: ReporterConnector<A, boolean, Prepend<C, I>>,
   subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, I>>,
 ): Build<ResultProcessor<R>, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
@@ -93,9 +105,9 @@ export function ids<
         return pipe(
           maybeSubResult,
           Option_.fold(
-            () => [connect(reporters)(id, false)],
+            () => [connect(reporters)(...reporterArgsFrom(subContext, false))],
             (subResult) => [
-              connect(reporters)(id, true),
+              connect(reporters)(...reporterArgsFrom(subContext, true)),
               subProcessor(reporters)(subContext)(subResult),
             ],
           ),
@@ -111,11 +123,7 @@ export function ids<
 
 // properties result contains results for a set of optional queries
 
-export type ResultProcessorBuilderMapping<A, R, C extends Context> = {
-  [I in keyof Required<R>]: Build<ResultProcessor<Required<R>[I]>, A, C>;
-};
-
-export function properties<A, R, C extends Context>(
+export function properties<A extends ReporterAPI, R extends Result, C extends Context>(
   processors: ResultProcessorBuilderMapping<A, R, C>,
 ): Build<ResultProcessor<R>, A, C> {
   return (reporters: A) => (context: C) => <P extends string & keyof R>(

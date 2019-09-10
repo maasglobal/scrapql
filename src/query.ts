@@ -1,4 +1,5 @@
-import { Prepend, Reverse } from 'typescript-tuple';
+import { Reverse } from 'typescript-tuple';
+import { Prepend } from 'typescript-tuple';
 import * as Record_ from 'fp-ts/lib/Record';
 import { Task, task } from 'fp-ts/lib/Task';
 import * as Task_ from 'fp-ts/lib/Task';
@@ -7,40 +8,59 @@ import * as Option_ from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/pipeable';
 
 import * as Tuple_ from './tuple';
-import { Build, QueryProcessor, Context } from './types';
+import {
+  Query,
+  Result,
+  Build,
+  QueryProcessor,
+  Context,
+  ResolverConnector,
+  ResolverAPI,
+  QueryProcessorBuilderMapping,
+} from './scrapql';
+
+// helper functions
+
+function resolverArgsFrom<C extends Context>(context: C): Reverse<C> {
+  return pipe(
+    context,
+    Tuple_.reverse,
+  );
+}
 
 // literal query contains static information that can be replaced with another literal
 
-export function literal<A, Q, R, C extends Context>(
-  constant: R,
-): Build<QueryProcessor<Q, R>, A, C> {
-  return (_0) => (_1) => (_2) => {
+export function literal<
+  A extends ResolverAPI,
+  Q extends Query,
+  R extends Result,
+  C extends Context
+>(constant: R): Build<QueryProcessor<Q, R>, A, C> {
+  return (_resolvers: A) => (_context: C) => (_query: Q) => {
     return Task_.of(constant);
   };
 }
 
 // leaf query contains information for retrieving a payload
 
-export type LeafQueryConnector<A, R, C extends Context> = (
-  a: A,
-) => (...c: Reverse<C>) => Task<R>;
-
-export function leaf<A, R, C extends Context>(
-  connect: LeafQueryConnector<A, R, C>,
+export function leaf<A extends ResolverAPI, R extends Result, C extends Context>(
+  connect: ResolverConnector<A, R, C>,
 ): Build<QueryProcessor<true, R>, A, C> {
-  return (resolvers) => (context: C) => (query: true): Task<R> => {
-    return connect(resolvers)(...Tuple_.reverse(context));
+  return (resolvers) => (context) => (query: true) => {
+    const resolver = connect(resolvers);
+    const args = resolverArgsFrom(context);
+    return resolver(...args);
   };
 }
 
 // keys query requests some information that is always present in database
 
 export function keys<
-  A,
-  Q extends Record<string, SQ>,
+  A extends ResolverAPI,
+  Q extends Query & Record<string, SQ>,
   I extends string & keyof Q,
-  SQ,
-  SR,
+  SQ extends Query,
+  SR extends Result,
   C extends Context
 >(
   subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, I>>,
@@ -63,19 +83,15 @@ export function keys<
 
 // keys query requests some information that may not be present in database
 
-export type ExistenceCheckConnector<A, I extends string> = (
-  a: A,
-) => (i: I) => Task<boolean>;
-
 export function ids<
-  A,
-  Q extends Record<string, SQ>,
+  A extends ResolverAPI,
+  Q extends Query & Record<string, SQ>,
   I extends string & keyof Q,
-  SQ,
-  SR,
+  SQ extends Query,
+  SR extends Result,
   C extends Context
 >(
-  connect: ExistenceCheckConnector<A, I>,
+  connect: ResolverConnector<A, boolean, Prepend<C, I>>,
   subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, I>>,
 ): Build<QueryProcessor<Q, Record<I, Option<SR>>>, A, C> {
   return (resolvers: A) => (context: C) => (query: Q) => {
@@ -88,7 +104,7 @@ export function ids<
             Tuple_.prepend(id),
           );
           return pipe(
-            connect(resolvers)(id),
+            connect(resolvers)(...resolverArgsFrom(subContext)),
             Task_.chain(
               (exists): Task<Option<SR>> => {
                 if (exists) {
@@ -110,11 +126,12 @@ export function ids<
 
 // properties query contains optional queries that may or may not be present
 
-export type QueryProcessorBuilderMapping<A, Q, R, C extends Context> = {
-  [I in keyof Q & keyof R]: Build<QueryProcessor<Required<Q>[I], Required<R>[I]>, A, C>;
-};
-
-export function properties<A, Q, R, C extends Context>(
+export function properties<
+  A extends ResolverAPI,
+  Q extends Query,
+  R extends Result,
+  C extends Context
+>(
   processors: QueryProcessorBuilderMapping<A, Q, R, C>,
 ): Build<QueryProcessor<Q, R>, A, C> {
   return (resolvers: A) => (context: C) => <P extends string & keyof Q & keyof R>(
