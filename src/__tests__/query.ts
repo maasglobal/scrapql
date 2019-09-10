@@ -5,7 +5,7 @@ import * as Option_ from 'fp-ts/lib/Option';
 import { name, version } from '../../package.json';
 
 import * as scrapqlQuery from '../query';
-import { Context, Build, QueryProcessor } from '../types';
+import { Context, Build, QueryProcessor, ResolverAPI } from '../scrapql';
 import { init } from '../scrapql';
 
 interface Logger<R, A extends Array<any>> {
@@ -29,7 +29,7 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 describe('query', () => {
   /* eslint-disable @typescript-eslint/no-use-before-define */
 
-  interface Resolvers {
+  interface Resolvers extends ResolverAPI {
     checkProperty1Existence: (i: Id) => Task<boolean>;
     fetchKeyResult: (i: Id, k: Key) => Task<KeyResult>;
     fetchProperty2Result: () => Task<Property2Result>;

@@ -5,7 +5,7 @@ import * as Option_ from 'fp-ts/lib/Option';
 import { name, version } from '../../package.json';
 
 import * as scrapqlResult from '../result';
-import { Context, Build, ResultProcessor } from '../types';
+import { Context, Build, ResultProcessor, ReporterAPI } from '../scrapql';
 import { init } from '../scrapql';
 
 interface Logger<R, A extends Array<any>> {
@@ -27,7 +27,7 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 }
 
 describe('result', () => {
-  interface Reporters {
+  interface Reporters extends ReporterAPI {
     learnProperty1Existence: (i: Id, r: boolean) => Task<void>;
     receiveKeyResult: (i: Id, k: Key, r: KeyResult) => Task<void>;
     receiveProperty2Result: (r: Property2Result) => Task<void>;
@@ -168,7 +168,13 @@ describe('result', () => {
       protocol: scrapqlResult.literal(),
       property1: scrapqlResult.ids(
         (r: Reporters) => r.learnProperty1Existence,
-        scrapqlResult.keys(
+        scrapqlResult.keys<
+          Reporters,
+          KeysResult,
+          keyof KeysResult,
+          KeysResult[keyof KeysResult],
+          [Id]
+        >(
           scrapqlResult.leaf<Reporters, KeyResult, [Key, Id]>(
             (r: Reporters) => r.receiveKeyResult,
           ),
