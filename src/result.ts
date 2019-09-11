@@ -19,11 +19,21 @@ import {
   ReporterConnector,
   ReporterAPI,
   ResultProcessorBuilderMapping,
+  LiteralResult,
+  LeafResult,
+  Key,
+  KeysResult,
+  Id,
+  ExistenceResult,
+  IdsResult,
+  Property,
+  PropertiesResult,
+  ReportableResult,
 } from './scrapql';
 
 // helper functions
 
-function reporterArgsFrom<R extends Result, C extends Context>(
+function reporterArgsFrom<R extends ReportableResult, C extends Context>(
   context: C,
   result: R,
 ): Concat<Reverse<C>, [R]> {
@@ -38,7 +48,7 @@ function reporterArgsFrom<R extends Result, C extends Context>(
 
 export function literal<
   A extends ReporterAPI,
-  R extends Result,
+  R extends LiteralResult,
   C extends Context
 >(): Build<ResultProcessor<R>, A, C> {
   return (_0: A) => (_1: C) => (_3: R) => Task_.of(undefined);
@@ -46,7 +56,7 @@ export function literal<
 
 // leaf result contains part of the payload
 
-export function leaf<A extends ReporterAPI, R extends Result, C extends Context>(
+export function leaf<A extends ReporterAPI, R extends LeafResult, C extends Context>(
   connect: ReporterConnector<A, R, C>,
 ): Build<ResultProcessor<R>, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
@@ -58,17 +68,17 @@ export function leaf<A extends ReporterAPI, R extends Result, C extends Context>
 
 export function keys<
   A extends ReporterAPI,
-  R extends Result & Record<string, SR>,
-  I extends string & keyof R,
+  R extends KeysResult<SR>,
+  K extends Key & keyof R,
   SR extends Result,
   C extends Context
 >(
-  subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, I>>,
+  subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, K>>,
 ): Build<ResultProcessor<R>, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
     const tasks: Array<Task<void>> = pipe(
       result,
-      Record_.mapWithIndex((key: I, subResult: SR) => {
+      Record_.mapWithIndex((key: K, subResult: SR) => {
         const subContext = pipe(
           context,
           Tuple_.prepend(key),
@@ -76,7 +86,7 @@ export function keys<
         return subProcessor(reporters)(subContext)(subResult);
       }),
       Record_.toUnfoldable(array),
-      Array_.map(([k, v]) => v),
+      Array_.map(([_k, v]) => v),
     );
     return Foldable_.traverse_(taskSeq, array)(tasks, identity);
   };
@@ -86,12 +96,12 @@ export function keys<
 
 export function ids<
   A extends ReporterAPI,
-  R extends Result & Record<string, Option<SR>>,
-  I extends string & keyof R,
+  R extends IdsResult<SR>,
+  I extends Id & keyof R,
   SR extends Result,
   C extends Context
 >(
-  connect: ReporterConnector<A, boolean, Prepend<C, I>>,
+  connect: ReporterConnector<A, ExistenceResult, Prepend<C, I>>,
   subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, I>>,
 ): Build<ResultProcessor<R>, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
@@ -114,7 +124,7 @@ export function ids<
         );
       }),
       Record_.toUnfoldable(array),
-      Array_.map(([k, v]) => v),
+      Array_.map(([_k, v]) => v),
       Array_.flatten,
     );
     return Foldable_.traverse_(taskSeq, array)(tasks, identity);
@@ -123,10 +133,12 @@ export function ids<
 
 // properties result contains results for a set of optional queries
 
-export function properties<A extends ReporterAPI, R extends Result, C extends Context>(
-  processors: ResultProcessorBuilderMapping<A, R, C>,
-): Build<ResultProcessor<R>, A, C> {
-  return (reporters: A) => (context: C) => <P extends string & keyof R>(
+export function properties<
+  A extends ReporterAPI,
+  R extends PropertiesResult,
+  C extends Context
+>(processors: ResultProcessorBuilderMapping<A, R, C>): Build<ResultProcessor<R>, A, C> {
+  return (reporters: A) => (context: C) => <P extends Property & keyof R>(
     result: R,
   ): Task<void> => {
     const taskRecord: Record<P, Task<void>> = pipe(
@@ -139,7 +151,7 @@ export function properties<A extends ReporterAPI, R extends Result, C extends Co
     const tasks: Array<Task<void>> = pipe(
       taskRecord,
       Record_.toUnfoldable(array),
-      Array_.map(([k, v]) => v),
+      Array_.map(([_k, v]) => v),
     );
     return Foldable_.traverse_(taskSeq, array)(tasks, identity);
   };

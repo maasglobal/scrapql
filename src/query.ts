@@ -17,6 +17,20 @@ import {
   ResolverConnector,
   ResolverAPI,
   QueryProcessorBuilderMapping,
+  LiteralQuery,
+  LeafQuery,
+  Key,
+  KeysQuery,
+  Id,
+  IdsQuery,
+  Property,
+  PropertiesQuery,
+  LiteralResult,
+  LeafResult,
+  KeysResult,
+  ExistenceResult,
+  IdsResult,
+  PropertiesResult,
 } from './scrapql';
 
 // helper functions
@@ -32,8 +46,8 @@ function resolverArgsFrom<C extends Context>(context: C): Reverse<C> {
 
 export function literal<
   A extends ResolverAPI,
-  Q extends Query,
-  R extends Result,
+  Q extends LiteralQuery,
+  R extends LiteralResult,
   C extends Context
 >(constant: R): Build<QueryProcessor<Q, R>, A, C> {
   return (_resolvers: A) => (_context: C) => (_query: Q) => {
@@ -43,10 +57,13 @@ export function literal<
 
 // leaf query contains information for retrieving a payload
 
-export function leaf<A extends ResolverAPI, R extends Result, C extends Context>(
-  connect: ResolverConnector<A, R, C>,
-): Build<QueryProcessor<true, R>, A, C> {
-  return (resolvers) => (context) => (query: true) => {
+export function leaf<
+  A extends ResolverAPI,
+  Q extends LeafQuery,
+  R extends LeafResult,
+  C extends Context
+>(connect: ResolverConnector<A, R, C>): Build<QueryProcessor<Q, R>, A, C> {
+  return (resolvers) => (context) => (_query: Q) => {
     const resolver = connect(resolvers);
     const args = resolverArgsFrom(context);
     return resolver(...args);
@@ -57,19 +74,19 @@ export function leaf<A extends ResolverAPI, R extends Result, C extends Context>
 
 export function keys<
   A extends ResolverAPI,
-  Q extends Query & Record<string, SQ>,
-  I extends string & keyof Q,
+  Q extends KeysQuery<SQ>,
+  K extends Key & keyof Q,
   SQ extends Query,
   SR extends Result,
   C extends Context
 >(
-  subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, I>>,
-): Build<QueryProcessor<Q, Record<I, SR>>, A, C> {
-  return (resolvers: A) => (context: C) => (query: Q): Task<Record<I, SR>> =>
+  subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, K>>,
+): Build<QueryProcessor<Q, KeysResult<SR>>, A, C> {
+  return (resolvers: A) => (context: C) => (query: Q): Task<KeysResult<SR>> =>
     pipe(
       query,
       Record_.mapWithIndex(
-        (key: I, subQuery: SQ): Task<SR> => {
+        (key: K, subQuery: SQ): Task<SR> => {
           const subContext = pipe(
             context,
             Tuple_.prepend(key),
@@ -85,15 +102,15 @@ export function keys<
 
 export function ids<
   A extends ResolverAPI,
-  Q extends Query & Record<string, SQ>,
-  I extends string & keyof Q,
+  Q extends IdsQuery<SQ>,
+  I extends Id & keyof Q,
   SQ extends Query,
   SR extends Result,
   C extends Context
 >(
-  connect: ResolverConnector<A, boolean, Prepend<C, I>>,
+  connect: ResolverConnector<A, ExistenceResult, Prepend<C, I>>,
   subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, I>>,
-): Build<QueryProcessor<Q, Record<I, Option<SR>>>, A, C> {
+): Build<QueryProcessor<Q, IdsResult<SR>>, A, C> {
   return (resolvers: A) => (context: C) => (query: Q) => {
     const tasks: Record<I, Task<Option<SR>>> = pipe(
       query,
@@ -103,8 +120,9 @@ export function ids<
             context,
             Tuple_.prepend(id),
           );
+          const existenceCheck = connect(resolvers);
           return pipe(
-            connect(resolvers)(...resolverArgsFrom(subContext)),
+            existenceCheck(...resolverArgsFrom(subContext)),
             Task_.chain(
               (exists): Task<Option<SR>> => {
                 if (exists) {
@@ -128,13 +146,13 @@ export function ids<
 
 export function properties<
   A extends ResolverAPI,
-  Q extends Query,
-  R extends Result,
+  Q extends PropertiesQuery,
+  R extends PropertiesResult,
   C extends Context
 >(
   processors: QueryProcessorBuilderMapping<A, Q, R, C>,
 ): Build<QueryProcessor<Q, R>, A, C> {
-  return (resolvers: A) => (context: C) => <P extends string & keyof Q & keyof R>(
+  return (resolvers: A) => (context: C) => <P extends Property & keyof Q & keyof R>(
     query: Q,
   ): Task<R> => {
     const tasks: Record<P, Task<R[P]>> = pipe(

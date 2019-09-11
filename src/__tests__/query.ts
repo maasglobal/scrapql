@@ -186,7 +186,9 @@ describe('query', () => {
       protocol: scrapqlQuery.literal(RESULT),
       property1: scrapqlQuery.ids(
         (r: Resolvers) => r.checkProperty1Existence,
-        scrapqlQuery.keys(scrapqlQuery.leaf((r: Resolvers) => r.fetchKeyResult)),
+        scrapqlQuery.keys<Resolvers, KeysQuery, Id, KeyQuery, KeyResult, [Id]>(
+          scrapqlQuery.leaf((r: Resolvers) => r.fetchKeyResult),
+        ),
       ),
       property2: scrapqlQuery.leaf((r: Resolvers) => r.fetchProperty2Result),
     });
