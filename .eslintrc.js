@@ -17,7 +17,7 @@ module.exports = {
     '@typescript-eslint/no-empty-interface': 0,
     '@typescript-eslint/no-explicit-any': 0,
     '@typescript-eslint/no-object-literal-type-assertion': [0],
-    '@typescript-eslint/no-unused-vars': [1, { args: 'none', ignoreRestSiblings: true }],
+    '@typescript-eslint/no-unused-vars': [1, { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
     'fp/no-nil': 0,
     'fp/no-rest-parameters': 0,
     'fp/no-unused-expression': 0,
