@@ -317,13 +317,17 @@ async function server(request: string): Promise<string> {
       Either_.mapLeft(failure),
       TaskEither_.fromEither,
     )),
-    TaskEither_.chain((query: Query) => processQuery(query)),
-    Task_.map((payload) => pipe(
-      Either_.stringifyJSON(payload, (reason) => String(reason)),
+    TaskEither_.chain((query: Query) => pipe(
+      processQuery(query),
+      Task_.map((result) => Either_.right(result)),
+    )),
+    Task_.map((result: Either<Errors, Result>) => tEither(Errors, Result).encode(result)),
+    Task_.map((json) => pipe(
+      Either_.stringifyJSON(json, (reason) => String(reason)),
     )),
     TaskEither_.fold(
-      (errorString) => Task_.of(errorString),
-      (jsonString) => Task_.of(jsonString),
+      (errorString) => Task_.of(errorString), // JSON stringify failure
+      (jsonString) => Task_.of(jsonString), // processing success or failure
     ),
   );
   return main();
@@ -331,7 +335,8 @@ async function server(request: string): Promise<string> {
 
 async function client(query: Query): Promise<void> {
   const main = pipe(
-    Either_.stringifyJSON(query, (reason) => [String(reason)]),
+    Query.encode(query),
+    (json: Json) => Either_.stringifyJSON(json, (reason) => [String(reason)]),
     TaskEither_.fromEither,
     TaskEither_.chain((requestBody) => pipe(
       TaskEither_.tryCatch(() => server(requestBody), (reason) => [String(reason)]),
@@ -342,8 +347,12 @@ async function client(query: Query): Promise<void> {
     )),
     TaskEither_.chain((json: unknown) => pipe(
       json,
-      Result.decode,
+      tEither(Errors, Result).decode,
       Either_.mapLeft(failure),
+      TaskEither_.fromEither,
+    )),
+    TaskEither_.chain((result: Either<Errors, Result>) => pipe(
+      result,
       TaskEither_.fromEither,
     )),
     TaskEither_.fold(
