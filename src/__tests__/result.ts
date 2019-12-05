@@ -1,11 +1,13 @@
 import { Task } from 'fp-ts/lib/Task';
+import { Either } from 'fp-ts/lib/Either';
+import * as Either_ from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
 
 import { name, version } from '../../package.json';
 
 import * as scrapqlResult from '../result';
-import { Context, Build, ResultProcessor, ReporterAPI } from '../scrapql';
+import { Context, Build, ResultProcessor, ReporterAPI, Existence } from '../scrapql';
 import { init } from '../scrapql';
 
 interface Logger<R, A extends Array<any>> {
@@ -28,14 +30,16 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 
 describe('result', () => {
   interface Reporters extends ReporterAPI {
-    learnProperty1Existence: (i: Id, r: boolean) => Task<void>;
+    learnProperty1Existence: (i: Id, r: Either<Err1, Existence>) => Task<void>;
     receiveKeyResult: (i: Id, k: Key, r: KeyResult) => Task<void>;
     receiveProperty2Result: (r: Property2Result) => Task<void>;
   }
 
   function createReporters(): Reporters {
     return {
-      learnProperty1Existence: loggerTask(jest.fn((_0: Id, _1: boolean) => undefined)),
+      learnProperty1Existence: loggerTask(
+        jest.fn((_0: Id, _1: Either<Err1, Existence>) => undefined),
+      ),
       receiveKeyResult: loggerTask(
         jest.fn((_0: Id, _1: Key, _2: KeyResult) => undefined),
       ),
@@ -46,6 +50,8 @@ describe('result', () => {
   type RPB<R, C extends Context> = Build<ResultProcessor<R>, Reporters, C>;
 
   const RESULT = `${name}/${version}/scrapql/test/result`;
+
+  type Err1 = 'error';
 
   type Id = string & ('id1' | 'id2');
   const id1: Id = 'id1';
@@ -87,15 +93,19 @@ describe('result', () => {
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
-  type Property1Result = Record<Id, Option<KeysResult>>;
+  type Property1Result = Record<Id, Either<Err1, Option<KeysResult>>>;
   const property1Result: Property1Result = {
-    [id1]: Option_.some(keysResult),
-    [id2]: Option_.none,
+    [id1]: Either_.right(Option_.some(keysResult)),
+    [id2]: Either_.right(Option_.none),
   };
-  const processProperty1: RPB<Property1Result, []> = scrapqlResult.ids(
-    (r) => r.learnProperty1Existence,
-    processKeys,
-  );
+  const processProperty1: RPB<Property1Result, []> = scrapqlResult.ids<
+    Reporters,
+    Property1Result,
+    Id,
+    KeysResult,
+    [],
+    Err1
+  >((r) => r.learnProperty1Existence, processKeys);
 
   it('processProperty1', async () => {
     const reporters = createReporters();
@@ -103,8 +113,8 @@ describe('result', () => {
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
-      [id1, true],
-      [id2, false],
+      [id1, Either_.right(true)],
+      [id2, Either_.right(false)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [id1, key1, key1Result],
@@ -154,8 +164,8 @@ describe('result', () => {
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
-      [id1, true],
-      [id2, false],
+      [id1, Either_.right(true)],
+      [id2, Either_.right(false)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [id1, key1, key1Result],
@@ -166,7 +176,7 @@ describe('result', () => {
   it('processRoot (standalone)', async () => {
     const processRoot = scrapqlResult.properties<Reporters, RootResult, []>({
       protocol: scrapqlResult.literal(),
-      property1: scrapqlResult.ids(
+      property1: scrapqlResult.ids<Reporters, Property1Result, Id, KeysResult, [], Err1>(
         (r: Reporters) => r.learnProperty1Existence,
         scrapqlResult.keys<
           Reporters,
@@ -187,8 +197,8 @@ describe('result', () => {
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
-      [id1, true],
-      [id2, false],
+      [id1, Either_.right(true)],
+      [id2, Either_.right(false)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [id1, key1, key1Result],

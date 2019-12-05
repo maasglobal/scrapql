@@ -104,13 +104,14 @@ import { TaskEither } from 'fp-ts/lib/TaskEither';
 
 import { pipe } from 'fp-ts/lib/pipeable';
 import * as Task_ from 'fp-ts/lib/Task';
+import * as Either_ from 'fp-ts/lib/Either';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { failure } from 'io-ts/lib/PathReporter'
 
 interface Resolvers {
   readonly fetchReport: (a: Year) => TaskEither<Errors, Report>;
   readonly fetchCustomer: (a: CustomerId) => TaskEither<Errors, Customer>;
-  readonly checkCustomerExistence: (a: CustomerId) => Task<boolean>;
+  readonly checkCustomerExistence: (a: CustomerId) => TaskEither<Errors, boolean>;
 }
 
 const resolvers: Resolvers = {
@@ -128,6 +129,7 @@ const resolvers: Resolvers = {
 
   checkCustomerExistence: (customerId) => pipe(
     () => db.hasCustomer(customerId),
+    Task_.map(Either_.right),
   ),
 
 };
@@ -241,12 +243,11 @@ export type Result = t.TypeOf<typeof Result>;
 ```typescript
 import { Either } from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
-import * as Either_ from 'fp-ts/lib/Either';
 
 interface Reporters {
   readonly receiveReport: (a: Year, b: Either<Errors, Report>) => Task<void>;
   readonly receiveCustomer: (a: CustomerId, b: Either<Errors, Option<Customer>>) => Task<void>;
-  readonly learnCustomerExistence: (a: CustomerId, b: boolean) => Task<void>;
+  readonly learnCustomerExistence: (a: CustomerId, b: Either<Errors, boolean>) => Task<void>;
 }
 
 const reporters: Reporters = {
@@ -267,8 +268,12 @@ const reporters: Reporters = {
     ),
   ),
 
-  learnCustomerExistence: (customerId, existence) => pipe(
-    () => Promise.resolve(console.log(customerId, existence ? 'known customer' : 'unknown customer')),
+  learnCustomerExistence: (customerId, result) => pipe(
+    result,
+    Either_.fold(
+      (errors) => () => Promise.resolve(console.error(customerId, errors)),
+      (existence) => () => Promise.resolve(console.log(customerId, existence ? 'known customer' : 'unknown customer')),
+    ),
   ),
 
 };

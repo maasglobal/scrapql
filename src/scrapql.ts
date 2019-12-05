@@ -1,5 +1,6 @@
 import { Concat, Reverse } from 'typescript-tuple';
 import { Option } from 'fp-ts/lib/Option';
+import { Either } from 'fp-ts/lib/Either';
 import { Task } from 'fp-ts/lib/Task';
 import * as query from './query';
 import * as result from './result';
@@ -9,8 +10,9 @@ export type Json = unknown;
 export type Id = string;
 export type Key = string;
 export type Property = string;
+export type Err = Json;
 
-export type ExistenceQuery = never;
+export type ExistenceQuery = never; // the query is implicit
 export type LiteralQuery = Json;
 export type LeafQuery = true;
 export type KeysQuery<S extends Query = Json> = Record<Key, S>;
@@ -24,11 +26,15 @@ export type StructuralQuery = LiteralQuery | KeysQuery | IdsQuery | PropertiesQu
 
 export type Query = StructuralQuery | FetchableQuery;
 
-export type ExistenceResult = boolean;
+export type Existence = boolean;
+export type ExistenceResult<E extends Err = Err> = Either<E, Existence>;
 export type LiteralResult = Json;
 export type LeafResult = Json;
 export type KeysResult<S extends Result = Json> = Record<Key, S>;
-export type IdsResult<S extends Result = Json> = Record<Id, Option<S>>;
+export type IdsResult<S extends Result = Json, E extends Err = Err> = Record<
+  Id,
+  Either<E, Option<S>>
+>;
 export type PropertiesResult<
   R extends { [I in Property]: Result } = { [I in Property]: Json }
 > = Partial<R>;

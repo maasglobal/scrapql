@@ -1,11 +1,15 @@
 import { Task } from 'fp-ts/lib/Task';
+import { TaskEither } from 'fp-ts/lib/TaskEither';
+import { Either } from 'fp-ts/lib/Either';
+import * as Either_ from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
+import { pipe } from 'fp-ts/lib/pipeable';
 
 import { name, version } from '../../package.json';
 
 import * as scrapqlQuery from '../query';
-import { Context, Build, QueryProcessor, ResolverAPI } from '../scrapql';
+import { Context, Build, QueryProcessor, ResolverAPI, Existence } from '../scrapql';
 import { init } from '../scrapql';
 
 interface Logger<R, A extends Array<any>> {
@@ -30,7 +34,7 @@ describe('query', () => {
   /* eslint-disable @typescript-eslint/no-use-before-define */
 
   interface Resolvers extends ResolverAPI {
-    checkProperty1Existence: (i: Id) => Task<boolean>;
+    checkProperty1Existence: (i: Id) => TaskEither<Err1, Existence>;
     fetchKeyResult: (i: Id, k: Key) => Task<KeyResult>;
     fetchProperty2Result: () => Task<Property2Result>;
   }
@@ -38,7 +42,12 @@ describe('query', () => {
   function createResolvers(): Resolvers {
     return {
       checkProperty1Existence: loggerTask(
-        jest.fn((id: Id) => Option_.isSome(property1Result[id])),
+        jest.fn((id: Id) =>
+          pipe(
+            property1Result[id],
+            Either_.map(Option_.isSome),
+          ),
+        ),
       ),
       fetchKeyResult: loggerTask(jest.fn((_0: Id, _1: Key) => key1Result)),
       fetchProperty2Result: loggerTask(jest.fn(() => property2Result)),
@@ -49,6 +58,8 @@ describe('query', () => {
 
   const QUERY = `${name}/${version}/scrapql/test/query`;
   const RESULT = `${name}/${version}/scrapql/test/result`;
+
+  type Err1 = 'error';
 
   type Id = string & ('id1' | 'id2');
   const id1: Id = 'id1';
@@ -94,11 +105,11 @@ describe('query', () => {
     expect(result).toEqual(keysResult);
   });
 
-  type Property1Result = Record<Id, Option<KeysResult>>;
+  type Property1Result = Record<Id, Either<Err1, Option<KeysResult>>>;
   type Property1Query = Record<Id, KeysQuery>;
   const property1Result: Property1Result = {
-    [id1]: Option_.some(keysResult),
-    [id2]: Option_.none,
+    [id1]: Either_.right(Option_.some(keysResult)),
+    [id2]: Either_.right(Option_.none),
   };
   const property1Query: Property1Query = {
     [id1]: keysQuery,
