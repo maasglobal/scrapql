@@ -1,10 +1,13 @@
 import { Reverse } from 'typescript-tuple';
 import { Prepend } from 'typescript-tuple';
 import * as Record_ from 'fp-ts/lib/Record';
+import { TaskEither } from 'fp-ts/lib/TaskEither';
+import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { Task, task } from 'fp-ts/lib/Task';
 import * as Task_ from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
+import * as boolean_ from 'fp-ts/lib/boolean';
 import { pipe } from 'fp-ts/lib/pipeable';
 
 import * as Tuple_ from './tuple';
@@ -31,6 +34,8 @@ import {
   ExistenceResult,
   IdsResult,
   PropertiesResult,
+  Existence,
+  Err,
 } from './scrapql';
 
 // helper functions
@@ -106,16 +111,17 @@ export function ids<
   I extends Id & keyof Q,
   SQ extends Query,
   SR extends Result,
-  C extends Context
+  C extends Context,
+  E extends Err
 >(
-  connect: ResolverConnector<A, ExistenceResult, Prepend<C, I>>,
+  connect: ResolverConnector<A, ExistenceResult<E>, Prepend<C, I>>,
   subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, I>>,
-): Build<QueryProcessor<Q, IdsResult<SR>>, A, C> {
+): Build<QueryProcessor<Q, IdsResult<SR, E>>, A, C> {
   return (resolvers: A) => (context: C) => (query: Q) => {
-    const tasks: Record<I, Task<Option<SR>>> = pipe(
+    const tasks: Record<I, TaskEither<E, Option<SR>>> = pipe(
       query,
       Record_.mapWithIndex(
-        (id: I, subQuery: SQ): Task<Option<SR>> => {
+        (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
           const subContext = pipe(
             context,
             Tuple_.prepend(id),
@@ -123,16 +129,19 @@ export function ids<
           const existenceCheck = connect(resolvers);
           return pipe(
             existenceCheck(...resolverArgsFrom(subContext)),
-            Task_.chain(
-              (exists): Task<Option<SR>> => {
-                if (exists) {
-                  return pipe(
-                    subProcessor(resolvers)(subContext)(subQuery),
-                    Task_.map(Option_.some),
-                  );
-                }
-                return Task_.of(Option_.none);
-              },
+            TaskEither_.chain((exists: Existence) =>
+              pipe(
+                exists,
+                boolean_.fold(
+                  (): TaskEither<E, Option<SR>> => TaskEither_.right(Option_.none),
+                  (): TaskEither<E, Option<SR>> =>
+                    pipe(
+                      subProcessor(resolvers)(subContext)(subQuery),
+                      Task_.map(Option_.some),
+                      TaskEither_.rightTask,
+                    ),
+                ),
+              ),
             ),
           );
         },

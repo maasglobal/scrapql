@@ -7,6 +7,8 @@ import { Task, taskSeq } from 'fp-ts/lib/Task';
 import * as Task_ from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
+import { Either } from 'fp-ts/lib/Either';
+import * as Either_ from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { identity } from 'fp-ts/lib/function';
 
@@ -29,6 +31,8 @@ import {
   Property,
   PropertiesResult,
   ReportableResult,
+  Existence,
+  Err,
 } from './scrapql';
 
 // helper functions
@@ -96,30 +100,48 @@ export function keys<
 
 export function ids<
   A extends ReporterAPI,
-  R extends IdsResult<SR>,
+  R extends IdsResult<SR, E>,
   I extends Id & keyof R,
   SR extends Result,
-  C extends Context
+  C extends Context,
+  E extends Err
 >(
-  connect: ReporterConnector<A, ExistenceResult, Prepend<C, I>>,
+  connect: ReporterConnector<A, ExistenceResult<E>, Prepend<C, I>>,
   subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, I>>,
 ): Build<ResultProcessor<R>, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
     const tasks: Array<Task<void>> = pipe(
       result,
-      Record_.mapWithIndex((id: I, maybeSubResult: Option<SR>) => {
+      Record_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
         const subContext = pipe(
           context,
           Tuple_.prepend(id),
         );
         return pipe(
           maybeSubResult,
-          Option_.fold(
-            () => [connect(reporters)(...reporterArgsFrom(subContext, false))],
-            (subResult) => [
-              connect(reporters)(...reporterArgsFrom(subContext, true)),
-              subProcessor(reporters)(subContext)(subResult),
+          Either_.fold(
+            (err) => [
+              connect(reporters)(
+                ...reporterArgsFrom(subContext, Either_.left<E, Existence>(err)),
+              ),
             ],
+            (opt) =>
+              pipe(
+                opt,
+                Option_.fold(
+                  () => [
+                    connect(reporters)(
+                      ...reporterArgsFrom(subContext, Either_.right<E, Existence>(false)),
+                    ),
+                  ],
+                  (subResult) => [
+                    connect(reporters)(
+                      ...reporterArgsFrom(subContext, Either_.right<E, Existence>(true)),
+                    ),
+                    subProcessor(reporters)(subContext)(subResult),
+                  ],
+                ),
+              ),
           ),
         );
       }),
