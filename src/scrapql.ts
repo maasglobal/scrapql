@@ -1,3 +1,4 @@
+import * as t from 'io-ts';
 import { Concat, Reverse } from 'typescript-tuple';
 import { Option } from 'fp-ts/lib/Option';
 import { Either } from 'fp-ts/lib/Either';
@@ -46,61 +47,91 @@ export type Result = StructuralResult | ReportableResult;
 
 export type Context = Array<string>; // really a tuple (T extends Array<string>)
 
-export type Processor<I, O> = (i: I) => Task<O>;
-export type QueryProcessor<Q extends Query, R> = Processor<Q, R>;
-export type ResultProcessor<R extends Result> = Processor<R, void>;
+export type ProcessorInstance<I, O> = (i: I) => Task<O>;
+export const processorInstance = <I, O, A extends API<any>>(
+  builder: Processor<I, O, A, []>,
+  api: A,
+): ProcessorInstance<I, O> => builder(api)([]);
+
+export type QueryProcessorInstance<Q extends Query, R> = ProcessorInstance<Q, R>;
+export type ResultProcessorInstance<R extends Result> = ProcessorInstance<R, void>;
+
+export type Processor<I, O, A extends API<any>, C extends Context> = (
+  a: A,
+) => (c: C) => ProcessorInstance<I, O>;
+
+export type QueryProcessor<
+  Q extends Query,
+  R extends Result,
+  A extends Resolvers,
+  C extends Context = []
+> = Processor<Q, R, A, C>;
+
+export type ResultProcessor<
+  R extends Result,
+  A extends Reporters,
+  C extends Context = []
+> = Processor<R, void, A, C>;
+
+export type Handler<A extends Array<any>, R> = (...a: A) => Task<R>;
 
 export type API<T> = Record<string, T>;
-export type ResolverAPI = API<any>; // should be API<Resolver>
-export type ReporterAPI = API<any>; // should be API<Reporter>
+export type Resolvers = API<any>; // should be API<Resolver>
+export type Reporters = API<any>; // should be API<Reporter>
 
-export type Reporter<R extends Result, C extends Context> = (
-  ...a: Concat<Reverse<C>, [R]>
-) => Task<void>;
+export type Reporter<R extends Result, C extends Context> = Handler<
+  Concat<Reverse<C>, [R]>,
+  void
+>;
 
 export type ReporterConnector<
-  A extends ReporterAPI,
+  A extends Reporters,
   R extends Result,
   C extends Context
 > = (a: A) => Reporter<R, C>;
 
-export type ResultProcessorBuilderMapping<
-  A extends ReporterAPI,
+export type ResultProcessorMapping<
+  A extends Reporters,
   R extends PropertiesResult,
   C extends Context
 > = {
-  [I in keyof Required<R>]: Build<ResultProcessor<Required<R>[I]>, A, C>;
+  [I in keyof Required<R>]: ResultProcessor<Required<R>[I], A, C>;
 };
 
-export type Resolver<R extends Result, C extends Context> = (...c: Reverse<C>) => Task<R>;
+export type Resolver<R extends Result, C extends Context> = Handler<Reverse<C>, R>;
 
 export type ResolverConnector<
-  A extends ResolverAPI,
+  A extends Resolvers,
   R extends Result,
   C extends Context
 > = (a: A) => Resolver<R, C>;
 
-export type QueryProcessorBuilderMapping<
-  A extends ResolverAPI,
+export type QueryProcessorMapping<
+  A extends Resolvers,
   Q extends PropertiesQuery,
   R extends PropertiesResult,
   C extends Context
 > = {
-  [I in keyof Q & keyof R]: Build<QueryProcessor<Required<Q>[I], Required<R>[I]>, A, C>;
+  [I in keyof Q & keyof R]: QueryProcessor<Required<Q>[I], Required<R>[I], A, C>;
 };
 
-export type Build<
-  P extends Processor<any, any>,
-  A extends API<any>,
-  C extends Context
-> = (a: A) => (c: C) => P;
+export type Constructor<T> = (...args: any) => T;
 
-export function init<P extends Processor<any, any>, A extends API<any>>(
-  builder: Build<P, A, []>,
-  api: A,
-): P {
-  return builder(api)([]);
-}
+export type Protocol<
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  QA extends Resolvers,
+  RA extends Reporters
+> = {
+  Query: t.Type<Q>;
+  query: Constructor<Q>;
+  Result: t.Type<R>;
+  result: Constructor<R>;
+  Err: t.Type<E>;
+  processResult: ResultProcessor<R, RA>;
+  processQuery: QueryProcessor<Q, R, QA>;
+};
 
 export const process = {
   query,
