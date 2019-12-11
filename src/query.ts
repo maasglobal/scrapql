@@ -14,12 +14,11 @@ import * as Tuple_ from './tuple';
 import {
   Query,
   Result,
-  Build,
   QueryProcessor,
   Context,
   ResolverConnector,
-  ResolverAPI,
-  QueryProcessorBuilderMapping,
+  Resolvers,
+  QueryProcessorMapping,
   LiteralQuery,
   LeafQuery,
   Key,
@@ -50,11 +49,11 @@ function resolverArgsFrom<C extends Context>(context: C): Reverse<C> {
 // literal query contains static information that can be replaced with another literal
 
 export function literal<
-  A extends ResolverAPI,
+  A extends Resolvers,
   Q extends LiteralQuery,
   R extends LiteralResult,
   C extends Context
->(constant: R): Build<QueryProcessor<Q, R>, A, C> {
+>(constant: R): QueryProcessor<Q, R, A, C> {
   return (_resolvers: A) => (_context: C) => (_query: Q) => {
     return Task_.of(constant);
   };
@@ -63,11 +62,11 @@ export function literal<
 // leaf query contains information for retrieving a payload
 
 export function leaf<
-  A extends ResolverAPI,
+  A extends Resolvers,
   Q extends LeafQuery,
   R extends LeafResult,
   C extends Context
->(connect: ResolverConnector<A, R, C>): Build<QueryProcessor<Q, R>, A, C> {
+>(connect: ResolverConnector<A, R, C>): QueryProcessor<Q, R, A, C> {
   return (resolvers) => (context) => (_query: Q) => {
     const resolver = connect(resolvers);
     const args = resolverArgsFrom(context);
@@ -78,15 +77,15 @@ export function leaf<
 // keys query requests some information that is always present in database
 
 export function keys<
-  A extends ResolverAPI,
+  A extends Resolvers,
   Q extends KeysQuery<SQ>,
   K extends Key & keyof Q,
   SQ extends Query,
   SR extends Result,
   C extends Context
 >(
-  subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, K>>,
-): Build<QueryProcessor<Q, KeysResult<SR>>, A, C> {
+  subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, K>>,
+): QueryProcessor<Q, KeysResult<SR>, A, C> {
   return (resolvers: A) => (context: C) => (query: Q): Task<KeysResult<SR>> =>
     pipe(
       query,
@@ -106,7 +105,7 @@ export function keys<
 // keys query requests some information that may not be present in database
 
 export function ids<
-  A extends ResolverAPI,
+  A extends Resolvers,
   Q extends IdsQuery<SQ>,
   I extends Id & keyof Q,
   SQ extends Query,
@@ -115,8 +114,8 @@ export function ids<
   E extends Err
 >(
   connect: ResolverConnector<A, ExistenceResult<E>, Prepend<C, I>>,
-  subProcessor: Build<QueryProcessor<SQ, SR>, A, Prepend<C, I>>,
-): Build<QueryProcessor<Q, IdsResult<SR, E>>, A, C> {
+  subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, I>>,
+): QueryProcessor<Q, IdsResult<SR, E>, A, C> {
   return (resolvers: A) => (context: C) => (query: Q) => {
     const tasks: Record<I, TaskEither<E, Option<SR>>> = pipe(
       query,
@@ -154,13 +153,11 @@ export function ids<
 // properties query contains optional queries that may or may not be present
 
 export function properties<
-  A extends ResolverAPI,
+  A extends Resolvers,
   Q extends PropertiesQuery,
   R extends PropertiesResult,
   C extends Context
->(
-  processors: QueryProcessorBuilderMapping<A, Q, R, C>,
-): Build<QueryProcessor<Q, R>, A, C> {
+>(processors: QueryProcessorMapping<A, Q, R, C>): QueryProcessor<Q, R, A, C> {
   return (resolvers: A) => (context: C) => <P extends Property & keyof Q & keyof R>(
     query: Q,
   ): Task<R> => {

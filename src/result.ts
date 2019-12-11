@@ -14,13 +14,12 @@ import { identity } from 'fp-ts/lib/function';
 
 import * as Tuple_ from './tuple';
 import {
-  Build,
-  Result,
   ResultProcessor,
+  Result,
   Context,
   ReporterConnector,
-  ReporterAPI,
-  ResultProcessorBuilderMapping,
+  Reporters,
+  ResultProcessorMapping,
   LiteralResult,
   LeafResult,
   Key,
@@ -51,18 +50,18 @@ function reporterArgsFrom<R extends ReportableResult, C extends Context>(
 // literal result is known on forehand so we throw it away
 
 export function literal<
-  A extends ReporterAPI,
+  A extends Reporters,
   R extends LiteralResult,
   C extends Context
->(): Build<ResultProcessor<R>, A, C> {
+>(): ResultProcessor<R, A, C> {
   return (_0: A) => (_1: C) => (_3: R) => Task_.of(undefined);
 }
 
 // leaf result contains part of the payload
 
-export function leaf<A extends ReporterAPI, R extends LeafResult, C extends Context>(
+export function leaf<A extends Reporters, R extends LeafResult, C extends Context>(
   connect: ReporterConnector<A, R, C>,
-): Build<ResultProcessor<R>, A, C> {
+): ResultProcessor<R, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
     return connect(reporters)(...reporterArgsFrom(context, result));
   };
@@ -71,14 +70,12 @@ export function leaf<A extends ReporterAPI, R extends LeafResult, C extends Cont
 // keys result contains data that always exists in database
 
 export function keys<
-  A extends ReporterAPI,
+  A extends Reporters,
   R extends KeysResult<SR>,
   K extends Key & keyof R,
   SR extends Result,
   C extends Context
->(
-  subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, K>>,
-): Build<ResultProcessor<R>, A, C> {
+>(subProcessor: ResultProcessor<SR, A, Prepend<C, K>>): ResultProcessor<R, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
     const tasks: Array<Task<void>> = pipe(
       result,
@@ -99,7 +96,7 @@ export function keys<
 // ids result contains data that may not exist in database
 
 export function ids<
-  A extends ReporterAPI,
+  A extends Reporters,
   R extends IdsResult<SR, E>,
   I extends Id & keyof R,
   SR extends Result,
@@ -107,8 +104,8 @@ export function ids<
   E extends Err
 >(
   connect: ReporterConnector<A, ExistenceResult<E>, Prepend<C, I>>,
-  subProcessor: Build<ResultProcessor<SR>, A, Prepend<C, I>>,
-): Build<ResultProcessor<R>, A, C> {
+  subProcessor: ResultProcessor<SR, A, Prepend<C, I>>,
+): ResultProcessor<R, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
     const tasks: Array<Task<void>> = pipe(
       result,
@@ -156,10 +153,10 @@ export function ids<
 // properties result contains results for a set of optional queries
 
 export function properties<
-  A extends ReporterAPI,
+  A extends Reporters,
   R extends PropertiesResult,
   C extends Context
->(processors: ResultProcessorBuilderMapping<A, R, C>): Build<ResultProcessor<R>, A, C> {
+>(processors: ResultProcessorMapping<A, R, C>): ResultProcessor<R, A, C> {
   return (reporters: A) => (context: C) => <P extends Property & keyof R>(
     result: R,
   ): Task<void> => {
