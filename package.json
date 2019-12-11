@@ -1,6 +1,6 @@
 {
   "name": "scrapql",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "",
   "main": "lib/scrapql.js",
   "files": [
@@ -18,7 +18,8 @@
     "deploy-npm": "yarn ci && yarn publish"
   },
   "peerDependencies": {
-    "fp-ts": "^2.2.0"
+    "fp-ts": "^2.2.0",
+    "io-ts": "^2.0.1"
   },
   "devDependencies": {
     "@types/jest": "^24.0.12",
