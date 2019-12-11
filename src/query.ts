@@ -1,4 +1,4 @@
-import { Reverse } from 'typescript-tuple';
+import { Concat, Reverse } from 'typescript-tuple';
 import { Prepend } from 'typescript-tuple';
 import * as Record_ from 'fp-ts/lib/Record';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
@@ -31,18 +31,25 @@ import {
   LeafResult,
   KeysResult,
   ExistenceResult,
+  ExistenceQuery,
+  existenceQuery,
   IdsResult,
   PropertiesResult,
+  FetchableQuery,
   Existence,
   Err,
 } from './scrapql';
 
 // helper functions
 
-function resolverArgsFrom<C extends Context>(context: C): Reverse<C> {
+function resolverArgsFrom<Q extends FetchableQuery, C extends Context>(
+  context: C,
+  query: Q,
+): Concat<Reverse<C>, [Q]> {
   return pipe(
     context,
     Tuple_.reverse,
+    Tuple_.concat([query] as [Q]),
   );
 }
 
@@ -66,10 +73,10 @@ export function leaf<
   Q extends LeafQuery,
   R extends LeafResult,
   C extends Context
->(connect: ResolverConnector<A, R, C>): QueryProcessor<Q, R, A, C> {
-  return (resolvers) => (context) => (_query: Q) => {
+>(connect: ResolverConnector<A, Q, R, C>): QueryProcessor<Q, R, A, C> {
+  return (resolvers) => (context) => (query: Q) => {
     const resolver = connect(resolvers);
-    const args = resolverArgsFrom(context);
+    const args = resolverArgsFrom(context, query);
     return resolver(...args);
   };
 }
@@ -113,7 +120,7 @@ export function ids<
   C extends Context,
   E extends Err
 >(
-  connect: ResolverConnector<A, ExistenceResult<E>, Prepend<C, I>>,
+  connect: ResolverConnector<A, ExistenceQuery<I>, ExistenceResult<E>, C>,
   subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, I>>,
 ): QueryProcessor<Q, IdsResult<SR, E>, A, C> {
   return (resolvers: A) => (context: C) => (query: Q) => {
@@ -127,7 +134,7 @@ export function ids<
           );
           const existenceCheck = connect(resolvers);
           return pipe(
-            existenceCheck(...resolverArgsFrom(subContext)),
+            existenceCheck(...resolverArgsFrom(context, existenceQuery(id))),
             TaskEither_.chain((exists: Existence) =>
               pipe(
                 exists,

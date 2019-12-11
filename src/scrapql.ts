@@ -13,16 +13,21 @@ export type Key = string;
 export type Property = string;
 export type Err = Json;
 
-export type ExistenceQuery = never; // the query is implicit
+export type ExistenceQuery<Q extends string> = Q & {
+  readonly ExistenceQuery: unique symbol;
+};
+export const existenceQuery = <I extends Id>(id: I): ExistenceQuery<I> =>
+  id as ExistenceQuery<I>;
+
 export type LiteralQuery = Json;
-export type LeafQuery = true;
+export type LeafQuery = Json;
 export type KeysQuery<S extends Query = Json> = Record<Key, S>;
 export type IdsQuery<S extends Query = Json> = Record<Id, S>;
 export type PropertiesQuery<
   Q extends { [I in Property]: Query } = { [I in Property]: Json }
 > = Partial<Q>;
 
-export type FetchableQuery = LeafQuery | ExistenceQuery;
+export type FetchableQuery = LeafQuery | ExistenceQuery<any>;
 export type StructuralQuery = LiteralQuery | KeysQuery | IdsQuery | PropertiesQuery;
 
 export type Query = StructuralQuery | FetchableQuery;
@@ -98,13 +103,17 @@ export type ResultProcessorMapping<
   [I in keyof Required<R>]: ResultProcessor<Required<R>[I], A, C>;
 };
 
-export type Resolver<R extends Result, C extends Context> = Handler<Reverse<C>, R>;
+export type Resolver<Q extends Query, R extends Result, C extends Context> = Handler<
+  Concat<Reverse<C>, [Q]>,
+  R
+>;
 
 export type ResolverConnector<
   A extends Resolvers,
+  Q extends Query,
   R extends Result,
   C extends Context
-> = (a: A) => Resolver<R, C>;
+> = (a: A) => Resolver<Q, R, C>;
 
 export type QueryProcessorMapping<
   A extends Resolvers,

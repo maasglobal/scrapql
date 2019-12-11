@@ -63,7 +63,9 @@ export function leaf<A extends Reporters, R extends LeafResult, C extends Contex
   connect: ReporterConnector<A, R, C>,
 ): ResultProcessor<R, A, C> {
   return (reporters: A) => (context: C) => (result: R) => {
-    return connect(reporters)(...reporterArgsFrom(context, result));
+    const reporter = connect(reporters);
+    const args = reporterArgsFrom(context, result);
+    return reporter(...args);
   };
 }
 
