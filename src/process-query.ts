@@ -85,15 +85,15 @@ export function leaf<
 
 export function keys<
   A extends Resolvers,
-  Q extends KeysQuery<SQ>,
+  Q extends KeysQuery<SQ, K>,
   K extends Key & keyof Q,
   SQ extends Query,
   SR extends Result,
   C extends Context
 >(
   subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, K>>,
-): QueryProcessor<Q, KeysResult<SR>, A, C> {
-  return (resolvers: A) => (context: C) => (query: Q): Task<KeysResult<SR>> =>
+): QueryProcessor<Q, KeysResult<SR, K>, A, C> {
+  return (resolvers: A) => (context: C) => (query: Q): Task<KeysResult<SR, K>> =>
     pipe(
       query,
       Record_.mapWithIndex(
@@ -113,8 +113,8 @@ export function keys<
 
 export function ids<
   A extends Resolvers,
-  Q extends IdsQuery<SQ>,
-  I extends Id & keyof Q,
+  Q extends IdsQuery<SQ, I>,
+  I extends Id,
   SQ extends Query,
   SR extends Result,
   C extends Context,
@@ -122,7 +122,7 @@ export function ids<
 >(
   connect: ResolverConnector<A, ExistenceQuery<I>, ExistenceResult<E>, C>,
   subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, I>>,
-): QueryProcessor<Q, IdsResult<SR, E>, A, C> {
+): QueryProcessor<Q, IdsResult<SR, I, E>, A, C> {
   return (resolvers: A) => (context: C) => (query: Q) => {
     const tasks: Record<I, TaskEither<E, Option<SR>>> = pipe(
       query,
