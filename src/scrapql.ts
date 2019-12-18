@@ -1,10 +1,12 @@
 import * as t from 'io-ts';
 import { Concat, Reverse } from 'typescript-tuple';
+import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { Option } from 'fp-ts/lib/Option';
 import { Either } from 'fp-ts/lib/Either';
 import { Task } from 'fp-ts/lib/Task';
-import * as query from './query';
-import * as result from './result';
+
+export { process } from './process';
+export { reduce } from './reduce';
 
 export type Json = unknown;
 
@@ -13,16 +15,16 @@ export type Key = string;
 export type Property = string;
 export type Err = Json;
 
-export type ExistenceQuery<Q extends string> = Q & {
+export type ExistenceQuery<Q extends Id = Id> = Q & {
   readonly ExistenceQuery: unique symbol;
 };
-export const existenceQuery = <I extends Id>(id: I): ExistenceQuery<I> =>
+export const existenceQuery = <I extends Id = Id>(id: I): ExistenceQuery<I> =>
   id as ExistenceQuery<I>;
 
 export type LiteralQuery = Json;
 export type LeafQuery = Json;
-export type KeysQuery<S extends Query = Json> = Record<Key, S>;
-export type IdsQuery<S extends Query = Json> = Record<Id, S>;
+export type KeysQuery<SQ extends Query = Json, K extends Key = Key> = Record<Key, SQ>;
+export type IdsQuery<SQ extends Query = Json, I extends Id = Id> = Record<I, SQ>;
 export type PropertiesQuery<
   Q extends { [I in Property]: Query } = { [I in Property]: Json }
 > = Partial<Q>;
@@ -36,11 +38,12 @@ export type Existence = boolean;
 export type ExistenceResult<E extends Err = Err> = Either<E, Existence>;
 export type LiteralResult = Json;
 export type LeafResult = Json;
-export type KeysResult<S extends Result = Json> = Record<Key, S>;
-export type IdsResult<S extends Result = Json, E extends Err = Err> = Record<
-  Id,
-  Either<E, Option<S>>
->;
+export type KeysResult<SR extends Result = Json, K extends Key = Key> = Record<Key, SR>;
+export type IdsResult<
+  SR extends Result = Json,
+  I extends Id = Id,
+  E extends Err = Err
+> = Record<I, Either<E, Option<SR>>>;
 export type PropertiesResult<
   R extends { [I in Property]: Result } = { [I in Property]: Json }
 > = Partial<R>;
@@ -124,6 +127,14 @@ export type QueryProcessorMapping<
   [I in keyof Q & keyof R]: QueryProcessor<Required<Q>[I], Required<R>[I], A, C>;
 };
 
+export type Results<R extends Result> = NonEmptyArray<R>;
+export type ResultReducer<R extends Result> = (r: Results<R>) => R;
+export type LeafResultCombiner<R extends Result> = (w: R, r: R) => R;
+
+export type ResultReducerMapping<R extends PropertiesResult> = {
+  [I in keyof R]: ResultReducer<Required<R>[I]>;
+};
+
 export type Constructor<T> = (...args: any) => T;
 
 export type Protocol<
@@ -140,9 +151,5 @@ export type Protocol<
   Err: t.Type<E>;
   processResult: ResultProcessor<R, RA>;
   processQuery: QueryProcessor<Q, R, QA>;
-};
-
-export const process = {
-  query,
-  result,
+  reduceResult: ResultReducer<R>;
 };

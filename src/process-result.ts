@@ -73,7 +73,7 @@ export function leaf<A extends Reporters, R extends LeafResult, C extends Contex
 
 export function keys<
   A extends Reporters,
-  R extends KeysResult<SR>,
+  R extends KeysResult<SR, K>,
   K extends Key & keyof R,
   SR extends Result,
   C extends Context
@@ -99,8 +99,8 @@ export function keys<
 
 export function ids<
   A extends Reporters,
-  R extends IdsResult<SR, E>,
-  I extends Id & keyof R,
+  R extends IdsResult<SR, I, E>,
+  I extends Id,
   SR extends Result,
   C extends Context,
   E extends Err
