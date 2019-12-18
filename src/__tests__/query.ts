@@ -71,9 +71,9 @@ describe('query', () => {
   const key1: Key = 'key1';
 
   type KeyResult = string;
-  type KeyQuery = true;
+  type KeyQuery = string;
   const key1Result: KeyResult = 'result1';
-  const key1Query: KeyQuery = true;
+  const key1Query: KeyQuery = 'query1';
   const processKey: CustomQP<KeyQuery, KeyResult, [Key, Id]> = scrapql.process.query.leaf(
     (r) => r.fetchKeyResult,
   );
@@ -83,7 +83,9 @@ describe('query', () => {
     const main = processKey(resolvers)([key1, id1])(key1Query);
     const result = await main();
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
-    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([[id1, key1]]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [id1, key1, key1Query],
+    ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(key1Result);
   });
@@ -105,7 +107,9 @@ describe('query', () => {
     const main = processKeys(resolvers)([id1])(keysQuery);
     const result = await main();
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
-    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([[id1, key1]]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [id1, key1, key1Query],
+    ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(keysResult);
   });
@@ -135,15 +139,17 @@ describe('query', () => {
       [id1],
       [id2],
     ]);
-    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([[id1, key1]]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [id1, key1, key1Query],
+    ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(property1Result);
   });
 
   type Property2Result = string;
-  type Property2Query = true;
+  type Property2Query = string;
   const property2Result: Property2Result = 'result2';
-  const property2Query: Property2Query = true;
+  const property2Query: Property2Query = 'query2';
   const processProperty2: CustomQP<
     Property2Query,
     Property2Result,
@@ -156,7 +162,9 @@ describe('query', () => {
     const result = await main();
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([]);
-    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([[]]);
+    expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([
+      [property2Query],
+    ]);
     expect(result).toEqual(property2Result);
   });
 
@@ -199,7 +207,9 @@ describe('query', () => {
       [id1],
       [id2],
     ]);
-    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([[id1, key1]]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [id1, key1, key1Query],
+    ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(rootResult);
   });
@@ -229,7 +239,9 @@ describe('query', () => {
       [id1],
       [id2],
     ]);
-    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([[id1, key1]]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [id1, key1, key1Query],
+    ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(rootResult);
   });
