@@ -2,7 +2,7 @@ import { Prepend, Concat, Reverse } from 'typescript-tuple';
 
 /* eslint-disable fp/no-mutating-methods */
 
-type Tuple = Array<any>;
+export type Tuple<S = any> = Array<S>;
 
 export const concat = <X extends Tuple>(x: X) => <T extends Tuple>(
   tuple: T,

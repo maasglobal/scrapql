@@ -4,6 +4,7 @@ import * as Array_ from 'fp-ts/lib/Array';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import * as Record_ from 'fp-ts/lib/Record';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
+import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import * as Task_ from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
@@ -54,7 +55,9 @@ export function literal<
   R extends LiteralResult,
   C extends Context
 >(): ResultProcessor<R, A, C> {
-  return (_0: A) => (_1: C) => (_3: R) => Task_.of(undefined);
+  return (_result: R) => (_context: C): ReaderTask<A, void> => {
+    return (_reporters) => Task_.of(undefined);
+  };
 }
 
 // leaf result contains part of the payload
@@ -62,10 +65,12 @@ export function literal<
 export function leaf<A extends Reporters, R extends LeafResult, C extends Context>(
   connect: ReporterConnector<A, R, C>,
 ): ResultProcessor<R, A, C> {
-  return (reporters: A) => (context: C) => (result: R) => {
-    const reporter = connect(reporters);
-    const args = reporterArgsFrom(context, result);
-    return reporter(...args);
+  return (result: R) => (context: C): ReaderTask<A, void> => {
+    return (reporters) => {
+      const reporter = connect(reporters);
+      const args = reporterArgsFrom(context, result);
+      return reporter(...args);
+    };
   };
 }
 
@@ -78,20 +83,22 @@ export function keys<
   SR extends Result,
   C extends Context
 >(subProcessor: ResultProcessor<SR, A, Prepend<C, K>>): ResultProcessor<R, A, C> {
-  return (reporters: A) => (context: C) => (result: R) => {
-    const tasks: Array<Task<void>> = pipe(
-      result,
-      Record_.mapWithIndex((key: K, subResult: SR) => {
-        const subContext = pipe(
-          context,
-          Tuple_.prepend(key),
-        );
-        return subProcessor(reporters)(subContext)(subResult);
-      }),
-      Record_.toUnfoldable(array),
-      Array_.map(([_k, v]) => v),
-    );
-    return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+  return (result: R) => (context: C): ReaderTask<A, void> => {
+    return (reporters) => {
+      const tasks: Array<Task<void>> = pipe(
+        result,
+        Record_.mapWithIndex((key: K, subResult: SR) => {
+          const subContext = pipe(
+            context,
+            Tuple_.prepend(key),
+          );
+          return subProcessor(subResult)(subContext)(reporters);
+        }),
+        Record_.toUnfoldable(array),
+        Array_.map(([_k, v]) => v),
+      );
+      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+    };
   };
 }
 
@@ -108,47 +115,55 @@ export function ids<
   connect: ReporterConnector<A, ExistenceResult<E>, Prepend<C, I>>,
   subProcessor: ResultProcessor<SR, A, Prepend<C, I>>,
 ): ResultProcessor<R, A, C> {
-  return (reporters: A) => (context: C) => (result: R) => {
-    const tasks: Array<Task<void>> = pipe(
-      result,
-      Record_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
-        const subContext = pipe(
-          context,
-          Tuple_.prepend(id),
-        );
-        return pipe(
-          maybeSubResult,
-          Either_.fold(
-            (err) => [
-              connect(reporters)(
-                ...reporterArgsFrom(subContext, Either_.left<E, Existence>(err)),
-              ),
-            ],
-            (opt) =>
-              pipe(
-                opt,
-                Option_.fold(
-                  () => [
-                    connect(reporters)(
-                      ...reporterArgsFrom(subContext, Either_.right<E, Existence>(false)),
-                    ),
-                  ],
-                  (subResult) => [
-                    connect(reporters)(
-                      ...reporterArgsFrom(subContext, Either_.right<E, Existence>(true)),
-                    ),
-                    subProcessor(reporters)(subContext)(subResult),
-                  ],
+  return (result: R) => (context: C): ReaderTask<A, void> => {
+    return (reporters) => {
+      const tasks: Array<Task<void>> = pipe(
+        result,
+        Record_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
+          const subContext = pipe(
+            context,
+            Tuple_.prepend(id),
+          );
+          return pipe(
+            maybeSubResult,
+            Either_.fold(
+              (err) => [
+                connect(reporters)(
+                  ...reporterArgsFrom(subContext, Either_.left<E, Existence>(err)),
                 ),
-              ),
-          ),
-        );
-      }),
-      Record_.toUnfoldable(array),
-      Array_.map(([_k, v]) => v),
-      Array_.flatten,
-    );
-    return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+              ],
+              (opt) =>
+                pipe(
+                  opt,
+                  Option_.fold(
+                    () => [
+                      connect(reporters)(
+                        ...reporterArgsFrom(
+                          subContext,
+                          Either_.right<E, Existence>(false),
+                        ),
+                      ),
+                    ],
+                    (subResult) => [
+                      connect(reporters)(
+                        ...reporterArgsFrom(
+                          subContext,
+                          Either_.right<E, Existence>(true),
+                        ),
+                      ),
+                      subProcessor(subResult)(subContext)(reporters),
+                    ],
+                  ),
+                ),
+            ),
+          );
+        }),
+        Record_.toUnfoldable(array),
+        Array_.map(([_k, v]) => v),
+        Array_.flatten,
+      );
+      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+    };
   };
 }
 
@@ -159,21 +174,23 @@ export function properties<
   R extends PropertiesResult,
   C extends Context
 >(processors: ResultProcessorMapping<A, R, C>): ResultProcessor<R, A, C> {
-  return (reporters: A) => (context: C) => <P extends Property & keyof R>(
-    result: R,
-  ): Task<void> => {
-    const taskRecord: Record<P, Task<void>> = pipe(
-      result,
-      Record_.mapWithIndex((property, subResult: R[P]) => {
-        const processor = processors[property];
-        return processor(reporters)(context)(subResult);
-      }),
-    );
-    const tasks: Array<Task<void>> = pipe(
-      taskRecord,
-      Record_.toUnfoldable(array),
-      Array_.map(([_k, v]) => v),
-    );
-    return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+  return <P extends Property & keyof R>(result: R) => (
+    context: C,
+  ): ReaderTask<A, void> => {
+    return (reporters): Task<void> => {
+      const taskRecord: Record<P, Task<void>> = pipe(
+        result,
+        Record_.mapWithIndex((property, subResult: R[P]) => {
+          const processor = processors[property];
+          return processor(subResult)(context)(reporters);
+        }),
+      );
+      const tasks: Array<Task<void>> = pipe(
+        taskRecord,
+        Record_.toUnfoldable(array),
+        Array_.map(([_k, v]) => v),
+      );
+      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+    };
   };
 }

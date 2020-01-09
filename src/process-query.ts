@@ -4,6 +4,7 @@ import * as Record_ from 'fp-ts/lib/Record';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { Task, task } from 'fp-ts/lib/Task';
+import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import * as Task_ from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
@@ -61,8 +62,8 @@ export function literal<
   R extends LiteralResult,
   C extends Context
 >(constant: R): QueryProcessor<Q, R, A, C> {
-  return (_resolvers: A) => (_context: C) => (_query: Q) => {
-    return Task_.of(constant);
+  return (_query: Q) => (_context: C): ReaderTask<A, R> => {
+    return (_resolvers) => Task_.of(constant);
   };
 }
 
@@ -74,10 +75,12 @@ export function leaf<
   R extends LeafResult,
   C extends Context
 >(connect: ResolverConnector<A, Q, R, C>): QueryProcessor<Q, R, A, C> {
-  return (resolvers) => (context) => (query: Q) => {
-    const resolver = connect(resolvers);
-    const args = resolverArgsFrom(context, query);
-    return resolver(...args);
+  return (query: Q) => (context: C): ReaderTask<A, R> => {
+    return (resolvers) => {
+      const resolver = connect(resolvers);
+      const args = resolverArgsFrom(context, query);
+      return resolver(...args);
+    };
   };
 }
 
@@ -93,20 +96,22 @@ export function keys<
 >(
   subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, K>>,
 ): QueryProcessor<Q, KeysResult<SR, K>, A, C> {
-  return (resolvers: A) => (context: C) => (query: Q): Task<KeysResult<SR, K>> =>
-    pipe(
-      query,
-      Record_.mapWithIndex(
-        (key: K, subQuery: SQ): Task<SR> => {
-          const subContext = pipe(
-            context,
-            Tuple_.prepend(key),
-          );
-          return subProcessor(resolvers)(subContext)(subQuery);
-        },
-      ),
-      Record_.sequence(task),
-    );
+  return (query: Q) => (context: C): ReaderTask<A, KeysResult<SR, K>> => {
+    return (resolvers) =>
+      pipe(
+        query,
+        Record_.mapWithIndex(
+          (key: K, subQuery: SQ): Task<SR> => {
+            const subContext = pipe(
+              context,
+              Tuple_.prepend(key),
+            );
+            return subProcessor(subQuery)(subContext)(resolvers);
+          },
+        ),
+        Record_.sequence(task),
+      );
+  };
 }
 
 // keys query requests some information that may not be present in database
@@ -123,37 +128,39 @@ export function ids<
   connect: ResolverConnector<A, ExistenceQuery<I>, ExistenceResult<E>, C>,
   subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, I>>,
 ): QueryProcessor<Q, IdsResult<SR, I, E>, A, C> {
-  return (resolvers: A) => (context: C) => (query: Q) => {
-    const tasks: Record<I, TaskEither<E, Option<SR>>> = pipe(
-      query,
-      Record_.mapWithIndex(
-        (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
-          const subContext = pipe(
-            context,
-            Tuple_.prepend(id),
-          );
-          const existenceCheck = connect(resolvers);
-          return pipe(
-            existenceCheck(...resolverArgsFrom(context, existenceQuery(id))),
-            TaskEither_.chain((exists: Existence) =>
-              pipe(
-                exists,
-                boolean_.fold(
-                  (): TaskEither<E, Option<SR>> => TaskEither_.right(Option_.none),
-                  (): TaskEither<E, Option<SR>> =>
-                    pipe(
-                      subProcessor(resolvers)(subContext)(subQuery),
-                      Task_.map(Option_.some),
-                      TaskEither_.rightTask,
-                    ),
+  return (query: Q) => (context: C): ReaderTask<A, IdsResult<SR, I, E>> => {
+    return (resolvers) => {
+      const tasks: Record<I, TaskEither<E, Option<SR>>> = pipe(
+        query,
+        Record_.mapWithIndex(
+          (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
+            const subContext = pipe(
+              context,
+              Tuple_.prepend(id),
+            );
+            const existenceCheck = connect(resolvers);
+            return pipe(
+              existenceCheck(...resolverArgsFrom(context, existenceQuery(id))),
+              TaskEither_.chain((exists: Existence) =>
+                pipe(
+                  exists,
+                  boolean_.fold(
+                    (): TaskEither<E, Option<SR>> => TaskEither_.right(Option_.none),
+                    (): TaskEither<E, Option<SR>> =>
+                      pipe(
+                        subProcessor(subQuery)(subContext)(resolvers),
+                        Task_.map(Option_.some),
+                        TaskEither_.rightTask,
+                      ),
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
-    );
-    return Record_.sequence(task)(tasks);
+            );
+          },
+        ),
+      );
+      return Record_.sequence(task)(tasks);
+    };
   };
 }
 
@@ -165,19 +172,21 @@ export function properties<
   R extends PropertiesResult,
   C extends Context
 >(processors: QueryProcessorMapping<A, Q, R, C>): QueryProcessor<Q, R, A, C> {
-  return (resolvers: A) => (context: C) => <P extends Property & keyof Q & keyof R>(
-    query: Q,
-  ): Task<R> => {
-    const tasks: Record<P, Task<R[P]>> = pipe(
-      query,
-      Record_.mapWithIndex((property, subQuery: Q[P]) => {
-        const processor = processors[property];
-        const subResult = processor(resolvers)(context)(subQuery);
-        return subResult;
-      }),
-    );
-    const result: Task<Record<P, R[P]>> = Record_.sequence(task)(tasks);
+  return <P extends Property & keyof Q & keyof R>(query: Q) => (
+    context: C,
+  ): ReaderTask<A, R> => {
+    return (resolvers) => {
+      const tasks: Record<P, Task<R[P]>> = pipe(
+        query,
+        Record_.mapWithIndex((property, subQuery: Q[P]) => {
+          const processor = processors[property];
+          const subResult = processor(subQuery)(context)(resolvers);
+          return subResult;
+        }),
+      );
+      const result: Task<Record<P, R[P]>> = Record_.sequence(task)(tasks);
 
-    return result as Task<R>;
+      return result as Task<R>;
+    };
   };
 }

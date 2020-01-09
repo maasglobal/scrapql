@@ -80,7 +80,7 @@ describe('query', () => {
 
   it('processKey', async () => {
     const resolvers = createResolvers();
-    const main = processKey(resolvers)([key1, id1])(key1Query);
+    const main = scrapql.processorInstance(processKey, resolvers, id1, key1)(key1Query);
     const result = await main();
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
@@ -104,7 +104,7 @@ describe('query', () => {
 
   it('processKeys', async () => {
     const resolvers = createResolvers();
-    const main = processKeys(resolvers)([id1])(keysQuery);
+    const main = scrapql.processorInstance(processKeys, resolvers, id1)(keysQuery);
     const result = await main();
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
