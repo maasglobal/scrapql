@@ -139,11 +139,11 @@ const resolvers: Resolvers = {
 ## Define Query Processor
 
 ```typescript
-import { init, process } from './scrapql';
+import { process, processorInstance } from './scrapql';
 
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
-const processQuery = init(
+const processQuery = processorInstance(
   process.query.properties<Resolvers, Query, Result, []>({
     protocol: process.query.literal(RESULT_PROTOCOL),
     get: process.query.properties({
