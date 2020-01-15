@@ -108,20 +108,22 @@ import * as Either_ from 'fp-ts/lib/Either';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { failure } from 'io-ts/lib/PathReporter'
 
+import { Ctx } from './scrapql';
+
 interface Resolvers {
-  readonly fetchReport: (a: Year) => TaskEither<Errors, Report>;
-  readonly fetchCustomer: (a: CustomerId) => TaskEither<Errors, Customer>;
+  readonly fetchReport: (a: unknown, b: Ctx<Year>) => TaskEither<Errors, Report>;
+  readonly fetchCustomer: (a: unknown, b: Ctx<CustomerId>) => TaskEither<Errors, Customer>;
   readonly checkCustomerExistence: (a: CustomerId) => TaskEither<Errors, boolean>;
 }
 
 const resolvers: Resolvers = {
-  fetchReport: (year) => pipe(
+  fetchReport: (_queryArgs, [year]) => pipe(
     () => db.getReport(year),
     Task_.map(Report.decode),
     TaskEither_.mapLeft(failure),
   ),
 
-  fetchCustomer: (customerId) => pipe(
+  fetchCustomer: (_queryArgs, [customerId]) => pipe(
     () => db.getCustomer(customerId),
     Task_.map(Customer.decode),
     TaskEither_.mapLeft(failure),
@@ -139,12 +141,12 @@ const resolvers: Resolvers = {
 ## Define Query Processor
 
 ```typescript
-import { process, processorInstance } from './scrapql';
+import { process, processorInstance, Ctx0, ctx0 } from './scrapql';
 
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
 const processQuery = processorInstance(
-  process.query.properties<Resolvers, Query, Result, []>({
+  process.query.properties<Resolvers, Query, Result, Ctx0>({
     protocol: process.query.literal(RESULT_PROTOCOL),
     get: process.query.properties({
       reports: process.query.keys(
@@ -157,6 +159,7 @@ const processQuery = processorInstance(
     }),
   }),
   resolvers,
+  ctx0,
 );
 ```
 
@@ -245,14 +248,14 @@ import { Either } from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 
 interface Reporters {
-  readonly receiveReport: (a: Year, b: Either<Errors, Report>) => Task<void>;
-  readonly receiveCustomer: (a: CustomerId, b: Either<Errors, Option<Customer>>) => Task<void>;
-  readonly learnCustomerExistence: (a: CustomerId, b: Either<Errors, boolean>) => Task<void>;
+  readonly receiveReport: (a: Either<Errors, Report>, b: Ctx<Year> ) => Task<void>;
+  readonly receiveCustomer: (a: Either<Errors, Option<Customer>>, b: Ctx<CustomerId>) => Task<void>;
+  readonly learnCustomerExistence: (a: Either<Errors, boolean>, b: Ctx<CustomerId>) => Task<void>;
 }
 
 const reporters: Reporters = {
 
-  receiveReport: (year, result) => pipe(
+  receiveReport: (result, [year]) => pipe(
     result,
     Either_.fold(
       (errors) => () => Promise.resolve(console.error(year, errors)),
@@ -260,7 +263,7 @@ const reporters: Reporters = {
     ),
   ),
 
-  receiveCustomer: (customerId, result) => pipe(
+  receiveCustomer: (result, [customerId]) => pipe(
     result,
     Either_.fold(
       (errors) => () => Promise.resolve(console.error(customerId, errors)),
@@ -268,7 +271,7 @@ const reporters: Reporters = {
     ),
   ),
 
-  learnCustomerExistence: (customerId, result) => pipe(
+  learnCustomerExistence: (result, [customerId]) => pipe(
     result,
     Either_.fold(
       (errors) => () => Promise.resolve(console.error(customerId, errors)),
@@ -284,18 +287,23 @@ const reporters: Reporters = {
 
 ```typescript
 
-const processResult = process.result.properties({
-  protocol: process.result.literal(),
-  get: process.result.properties({
-    reports: process.result.keys(
-      process.result.leaf((r: Reporters) => r.receiveReport)
-    ),
-    customers: process.result.ids(
-      (r: Reporters) => r.learnCustomerExistence,
-      process.result.leaf((r: Reporters) => r.receiveCustomer)
-    ),
+
+const processResult = processorInstance(
+  process.result.properties({
+    protocol: process.result.literal(),
+    get: process.result.properties({
+      reports: process.result.keys(
+        process.result.leaf((r: Reporters) => r.receiveReport)
+      ),
+      customers: process.result.ids(
+        (r: Reporters) => r.learnCustomerExistence,
+        process.result.leaf((r: Reporters) => r.receiveCustomer)
+      ),
+    }),
   }),
-})(reporters);
+  reporters,
+  ctx0,
+);
 ```
 
 

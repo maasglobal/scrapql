@@ -1,5 +1,3 @@
-import { Concat, Reverse } from 'typescript-tuple';
-import { Prepend } from 'typescript-tuple';
 import * as Record_ from 'fp-ts/lib/Record';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
@@ -11,7 +9,8 @@ import * as Option_ from 'fp-ts/lib/Option';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as Tuple_ from './tuple';
+import { Prepend } from './tuple';
+import * as Context_ from './tuple';
 import {
   Query,
   Result,
@@ -36,23 +35,9 @@ import {
   existenceQuery,
   IdsResult,
   PropertiesResult,
-  FetchableQuery,
   Existence,
   Err,
 } from './scrapql';
-
-// helper functions
-
-function resolverArgsFrom<Q extends FetchableQuery, C extends Context>(
-  context: C,
-  query: Q,
-): Concat<Reverse<C>, [Q]> {
-  return pipe(
-    context,
-    Tuple_.reverse,
-    Tuple_.concat([query] as [Q]),
-  );
-}
 
 // literal query contains static information that can be replaced with another literal
 
@@ -78,8 +63,7 @@ export function leaf<
   return (query: Q) => (context: C): ReaderTask<A, R> => {
     return (resolvers) => {
       const resolver = connect(resolvers);
-      const args = resolverArgsFrom(context, query);
-      return resolver(...args);
+      return resolver(query, context);
     };
   };
 }
@@ -94,7 +78,7 @@ export function keys<
   SR extends Result,
   C extends Context
 >(
-  subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, K>>,
+  subProcessor: QueryProcessor<SQ, SR, A, Prepend<K, C>>,
 ): QueryProcessor<Q, KeysResult<SR, K>, A, C> {
   return (query: Q) => (context: C): ReaderTask<A, KeysResult<SR, K>> => {
     return (resolvers) =>
@@ -104,7 +88,7 @@ export function keys<
           (key: K, subQuery: SQ): Task<SR> => {
             const subContext = pipe(
               context,
-              Tuple_.prepend(key),
+              Context_.prepend(key),
             );
             return subProcessor(subQuery)(subContext)(resolvers);
           },
@@ -126,7 +110,7 @@ export function ids<
   E extends Err
 >(
   connect: ResolverConnector<A, ExistenceQuery<I>, ExistenceResult<E>, C>,
-  subProcessor: QueryProcessor<SQ, SR, A, Prepend<C, I>>,
+  subProcessor: QueryProcessor<SQ, SR, A, Prepend<I, C>>,
 ): QueryProcessor<Q, IdsResult<SR, I, E>, A, C> {
   return (query: Q) => (context: C): ReaderTask<A, IdsResult<SR, I, E>> => {
     return (resolvers) => {
@@ -136,11 +120,11 @@ export function ids<
           (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
             const subContext = pipe(
               context,
-              Tuple_.prepend(id),
+              Context_.prepend(id),
             );
             const existenceCheck = connect(resolvers);
             return pipe(
-              existenceCheck(...resolverArgsFrom(context, existenceQuery(id))),
+              existenceCheck(existenceQuery(id), context),
               TaskEither_.chain((exists: Existence) =>
                 pipe(
                   exists,

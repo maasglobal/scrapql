@@ -11,8 +11,8 @@ module.exports = {
     'plugin:prettier/recommended',
   ],
   rules: {
-    '@typescript-eslint/array-type': [2, { default: 'generic' }],
-    '@typescript-eslint/camelcase': [2, { ignoreDestructuring: true }],
+    '@typescript-eslint/array-type': [1, { default: 'generic' }],
+    '@typescript-eslint/camelcase': [1, { ignoreDestructuring: true }],
     '@typescript-eslint/explicit-function-return-type': 0,
     '@typescript-eslint/no-empty-interface': 0,
     '@typescript-eslint/no-explicit-any': 0,
@@ -22,10 +22,10 @@ module.exports = {
     'fp/no-rest-parameters': 0,
     'fp/no-unused-expression': 0,
     'fp/no-mutation': [1, { commonjs: true }],
-    'fp/no-mutating-methods': [2, { allowedObjects: ['Array_', 'NonEmptyArray_', 'Tuple_'] }],
+    'fp/no-mutating-methods': [1, { allowedObjects: ['Array_', 'NonEmptyArray_', 'Tuple_'] }],
     'import/no-duplicates': 0,
     'import/no-unresolved': 0,
-    'import/order': 2,
+    'import/order': 1,
     'prettier/prettier': [
       1,
       {
