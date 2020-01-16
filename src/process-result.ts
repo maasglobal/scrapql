@@ -1,4 +1,3 @@
-import { Prepend, Concat, Reverse } from 'typescript-tuple';
 import { array } from 'fp-ts/lib/Array';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
@@ -13,7 +12,9 @@ import * as Either_ from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { identity } from 'fp-ts/lib/function';
 
-import * as Tuple_ from './tuple';
+import { Prepend } from './tuple';
+import * as Context_ from './tuple';
+
 import {
   ResultProcessor,
   Result,
@@ -30,23 +31,9 @@ import {
   IdsResult,
   Property,
   PropertiesResult,
-  ReportableResult,
   Existence,
   Err,
 } from './scrapql';
-
-// helper functions
-
-function reporterArgsFrom<R extends ReportableResult, C extends Context>(
-  context: C,
-  result: R,
-): Concat<Reverse<C>, [R]> {
-  return pipe(
-    context,
-    Tuple_.reverse,
-    Tuple_.concat([result] as [R]),
-  );
-}
 
 // literal result is known on forehand so we throw it away
 
@@ -68,8 +55,7 @@ export function leaf<A extends Reporters, R extends LeafResult, C extends Contex
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
       const reporter = connect(reporters);
-      const args = reporterArgsFrom(context, result);
-      return reporter(...args);
+      return reporter(result, context);
     };
   };
 }
@@ -82,7 +68,7 @@ export function keys<
   K extends Key & keyof R,
   SR extends Result,
   C extends Context
->(subProcessor: ResultProcessor<SR, A, Prepend<C, K>>): ResultProcessor<R, A, C> {
+>(subProcessor: ResultProcessor<SR, A, Prepend<K, C>>): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
       const tasks: Array<Task<void>> = pipe(
@@ -90,7 +76,7 @@ export function keys<
         Record_.mapWithIndex((key: K, subResult: SR) => {
           const subContext = pipe(
             context,
-            Tuple_.prepend(key),
+            Context_.prepend(key),
           );
           return subProcessor(subResult)(subContext)(reporters);
         }),
@@ -112,8 +98,8 @@ export function ids<
   C extends Context,
   E extends Err
 >(
-  connect: ReporterConnector<A, ExistenceResult<E>, Prepend<C, I>>,
-  subProcessor: ResultProcessor<SR, A, Prepend<C, I>>,
+  connect: ReporterConnector<A, ExistenceResult<E>, Prepend<I, C>>,
+  subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
 ): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
@@ -122,35 +108,21 @@ export function ids<
         Record_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
           const subContext = pipe(
             context,
-            Tuple_.prepend(id),
+            Context_.prepend(id),
           );
           return pipe(
             maybeSubResult,
             Either_.fold(
-              (err) => [
-                connect(reporters)(
-                  ...reporterArgsFrom(subContext, Either_.left<E, Existence>(err)),
-                ),
-              ],
+              (err) => [connect(reporters)(Either_.left<E, Existence>(err), subContext)],
               (opt) =>
                 pipe(
                   opt,
                   Option_.fold(
                     () => [
-                      connect(reporters)(
-                        ...reporterArgsFrom(
-                          subContext,
-                          Either_.right<E, Existence>(false),
-                        ),
-                      ),
+                      connect(reporters)(Either_.right<E, Existence>(false), subContext),
                     ],
                     (subResult) => [
-                      connect(reporters)(
-                        ...reporterArgsFrom(
-                          subContext,
-                          Either_.right<E, Existence>(true),
-                        ),
-                      ),
+                      connect(reporters)(Either_.right<E, Existence>(true), subContext),
                       subProcessor(subResult)(subContext)(reporters),
                     ],
                   ),
