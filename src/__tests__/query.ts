@@ -11,6 +11,9 @@ import { name, version } from '../../package.json';
 import { Ctx, Ctx0, ctx, ctx0 } from '../scrapql';
 import * as scrapql from '../scrapql';
 
+import { Dict, dict } from '../dict';
+import * as Dict_ from '../dict';
+
 interface Logger<R, A extends Array<any>> {
   (...a: A): R;
   mock: any;
@@ -43,7 +46,10 @@ describe('query', () => {
       checkProperty1Existence: loggerTask(
         jest.fn((id: Id) =>
           pipe(
-            property1Result[id],
+            property1Result,
+            Dict_.lookup(id),
+            Either_.fromOption((): Err1 => 'error'),
+            Either_.chain((x: Either<Err1, Option<KeysResult>>) => x),
             Either_.map(Option_.isSome),
           ),
         ),
@@ -98,14 +104,10 @@ describe('query', () => {
     expect(result).toEqual(key1Result);
   });
 
-  type KeysResult = Record<Key, KeyResult>;
-  type KeysQuery = Record<Key, KeyQuery>;
-  const keysResult: KeysResult = {
-    [key1]: key1Result,
-  };
-  const keysQuery: KeysQuery = {
-    [key1]: key1Query,
-  };
+  type KeysResult = Dict<Key, KeyResult>;
+  type KeysQuery = Dict<Key, KeyQuery>;
+  const keysResult: KeysResult = dict([key1, key1Result]);
+  const keysQuery: KeysQuery = dict([key1, key1Query]);
   const processKeys: CustomQP<
     KeysQuery,
     KeysResult,
@@ -125,16 +127,13 @@ describe('query', () => {
     expect(result).toEqual(keysResult);
   });
 
-  type Property1Result = Record<Id, Either<Err1, Option<KeysResult>>>;
-  type Property1Query = Record<Id, KeysQuery>;
-  const property1Result: Property1Result = {
-    [id1]: Either_.right(Option_.some(keysResult)),
-    [id2]: Either_.right(Option_.none),
-  };
-  const property1Query: Property1Query = {
-    [id1]: keysQuery,
-    [id2]: keysQuery,
-  };
+  type Property1Result = Dict<Id, Either<Err1, Option<KeysResult>>>;
+  type Property1Query = Dict<Id, KeysQuery>;
+  const property1Result: Property1Result = dict(
+    [id1, Either_.right(Option_.some(keysResult))],
+    [id2, Either_.right(Option_.none)],
+  );
+  const property1Query: Property1Query = [[id1, keysQuery], [id2, keysQuery]];
   const processProperty1: CustomQP<
     Property1Query,
     Property1Result,
@@ -245,7 +244,7 @@ describe('query', () => {
         scrapql.process.query.keys<
           Resolvers,
           KeysQuery,
-          Id,
+          Key,
           KeyQuery,
           KeyResult,
           Ctx<Id>
