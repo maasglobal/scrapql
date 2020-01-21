@@ -35,7 +35,13 @@ const example: any = {
   },
 };
 
-type Json = unknown;
+type Json =
+    | string
+    | number
+    | boolean
+    | null
+    | { [p: string]: Json }
+    | Array<Json>;
 
 interface Database {
   hasCustomer: (c: string) => Promise<boolean>;
@@ -80,6 +86,9 @@ type Errors = t.TypeOf<typeof Errors>;
 ## Define Query Validator
 
 ```typescript
+
+import { Dict } from 'scrapql/lib/dict';
+
 // name and version from package.json
 const packageName = 'scrapql-example-app';
 const packageVersion = '0.0.1';
@@ -88,12 +97,34 @@ const QUERY_PROTOCOL= `${packageName}/${packageVersion}/scrapql/query`;
 
 const Query = t.type({
   protocol: t.literal(QUERY_PROTOCOL),
-  get: t.type({
-    reports: t.record(Year, Report),
-    customers: t.record(CustomerId, Customer),
-  }),
+  reports: Dict(Year, t.type({
+    get: t.literal(true),
+  })),
+  customers: Dict(CustomerId, t.type({
+    get: t.literal(true),
+  })),
 });
-export type Query = t.TypeOf<typeof Query>;
+type Query = t.TypeOf<typeof Query>;
+```
+
+You can use the query validator to validate JSON queries as follows.
+
+```typescript
+import * as tPromise from 'io-ts-promise';
+
+const exampleJsonQuery: Json = {
+  protocol: QUERY_PROTOCOL,
+  reports: [
+    ['2018', {get: true}],
+    ['3030', {get: true}],
+  ],
+  customers: [
+    ['c002', {get: true}],
+    ['c007', {get: true}],
+  ],
+};
+
+const exampleQuery: Promise<Query> = tPromise.decode(Query, exampleJsonQuery);
 ```
 
 ## Define Query Resolvers
@@ -108,11 +139,11 @@ import * as Either_ from 'fp-ts/lib/Either';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { failure } from 'io-ts/lib/PathReporter'
 
-import { Ctx } from './scrapql';
+import { Ctx } from 'scrapql';
 
 interface Resolvers {
-  readonly fetchReport: (a: unknown, b: Ctx<Year>) => TaskEither<Errors, Report>;
-  readonly fetchCustomer: (a: unknown, b: Ctx<CustomerId>) => TaskEither<Errors, Customer>;
+  readonly fetchReport: (a: true, b: Ctx<Year>) => TaskEither<Errors, Report>;
+  readonly fetchCustomer: (a: true, b: Ctx<CustomerId>) => TaskEither<Errors, Customer>;
   readonly checkCustomerExistence: (a: CustomerId) => TaskEither<Errors, boolean>;
 }
 
@@ -141,91 +172,94 @@ const resolvers: Resolvers = {
 ## Define Query Processor
 
 ```typescript
-import { process, processorInstance, Ctx0, ctx0 } from './scrapql';
+import { QueryProcessor, process, Ctx0 } from 'scrapql';
 
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
-const processQuery = processorInstance(
-  process.query.properties<Resolvers, Query, Result, Ctx0>({
-    protocol: process.query.literal(RESULT_PROTOCOL),
-    get: process.query.properties({
-      reports: process.query.keys(
-        process.query.leaf((r: Resolvers) => r.fetchReport)
-      ),
-      customers: process.query.ids(
-        (r: Resolvers) => r.checkCustomerExistence,
-        process.query.leaf((r: Resolvers) => r.fetchCustomer),
-      ),
-    }),
-  }),
-  resolvers,
-  ctx0,
-);
+// Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
+const processQuery: QueryProcessor<Query, Result, Resolvers, Ctx0> = process.query.properties<Resolvers, Query, Result, Ctx0>({
+  protocol: process.query.literal(RESULT_PROTOCOL),
+    reports: process.query.keys(
+      process.query.properties({
+        get: process.query.leaf((r: Resolvers) => r.fetchReport)
+      }) as QueryProcessor<{ get: true }, { get: Either<Errors, Report> }, Resolvers, Ctx<Year>> ,
+    ),
+    customers: process.query.ids(
+      (r: Resolvers) => r.checkCustomerExistence,
+      process.query.properties({
+        get: process.query.leaf((r: Resolvers) => r.fetchCustomer),
+      }) as QueryProcessor<{ get: true }, { get: Either<Errors, Customer> }, Resolvers, Ctx<CustomerId>>,
+    ) as QueryProcessor<Dict<CustomerId, { get: true; }>, Dict<CustomerId, Either<Errors, { get: Either<Errors, Option<Customer>>; }>>, Resolvers, Ctx0>,
+  }) as QueryProcessor<Query, Result, Resolvers, Ctx0>;
 ```
 
-## Running The Query Processor
-
-Now that we have a query processor we can finally use it to process queries.
-The query processor works as follows.
+Running the processor will produce the following result.
 
 ```typescript
-const query: Json = {
-  protocol: QUERY_PROTOCOL,
-  get: {
-    reports: {
-      2018: true,
-      3030: true,
-    },
-    customers: {
-      c002: true,
-      c007: true,
-    },
-  },
-};
-
-async function jsonQueryProcessor<R>(query: Json): Promise<R> {
-  const main = pipe(
-    Query.decode(query),
-    TaskEither_.fromEither,
-    TaskEither_.mapLeft(failure),
-    TaskEither_.chain(processQuery),
-  );
-  return main();
-}
-```
-
-Executing main should return a promise with the query result of type `R`. Which
-should look as follows. The top level wrapper contains the result of the query
-decode and should return `left` in case of an invalid query.
-
-```typescript
-const result: Json = {
-  _tag: 'Right',
-  right: {
-    protocol: 'scrapql-example-app/0.0.1/scrapql/result',
-    get: {
-      reports: {
-        2018: { profit: 100 },
-        3030: { profit: 0 },
+const exampleResult = {
+  protocol: 'scrapql-example-app/0.0.1/scrapql/result',
+  reports: [
+    ['2018', {
+      get: {
+        _tag: 'Right',  // get success
+        right: { profit: 100 }
       },
-      customers: {
-        c002: {
-          _tag: 'Some',
-          value: {
-            name: 'Magica De Spell',
-            age: '35',
+    }],
+    ['3030', {
+      get: {
+        _tag: 'Right',  // get success
+        right: { profit: 0 }
+      },
+    }],
+  ],
+  customers: [
+    ['c002', {
+      _tag: 'Right',  // identity check success
+      right: {
+        _tag: 'Some',  // customer exists
+        some: {
+          get: {
+            _tag: 'Right',  // get success
+            right: {
+              name: 'Magica De Spell',
+              age: '35',
+            },
           },
         },
-        c007: {
-          _tag: 'None',
+      },
+    }],
+    ['c007', {
+      _tag: 'Right',  // identity check success
+      right: {
+        get: {
+          _tag: 'None',  // customer does not exist
         },
       },
-    },
-  },
+    }],
+  ],
 };
 ```
 
+You can run the processor as follows.
+
+```typescript
+import { processorInstance, ctx0 } from 'scrapql';
+
+async function generateExampleOutput() {
+  const qp = processorInstance(processQuery, resolvers, ctx0);
+  const q: Query = await tPromise.decode(Query, exampleJsonQuery);
+  const output = await qp(q)();
+  console.log(output);
+}
+
+generateExampleOutput();
+```
+
+The result object should look as follows.
+
 ## Define Result Validator
+
+Now that we know what the output will look like we can define a result validator.
 
 ```typescript
 import { option as tOption } from 'io-ts-types/lib/option';
@@ -233,13 +267,28 @@ import { either as tEither } from 'io-ts-types/lib/either';
 
 const Result = t.type({
   protocol: t.literal(RESULT_PROTOCOL),
-  get: t.type({
-    reports: t.record(Year, tEither(Errors, Report)),
-    customers: t.record(CustomerId, tEither(Errors, tOption(Customer))),
-  }),
+  reports: Dict(Year, t.type({
+    get: tEither(Errors, Report),
+  })),
+  customers: Dict(CustomerId, tEither(Errors, t.type({
+    get: tEither(Errors, tOption(Customer)),
+  }))),
 });
-export type Result = t.TypeOf<typeof Result>;
+type Result = t.TypeOf<typeof Result>;
 ```
+
+We can now use the result validator to encode the result as JSON.
+
+```typescript
+async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
+  const qp = processorInstance(processQuery, resolvers, ctx0);
+  const q: Query = await tPromise.decode(Query, jsonQuery);
+  const r: Result = await qp(q)();
+  const jsonResult: Json = JSON.parse(JSON.stringify(Result.encode(r)));
+  return jsonResult;
+}
+```
+
 
 ## Define Result Reporters
 
@@ -286,26 +335,52 @@ const reporters: Reporters = {
 ## Define Result Processor
 
 ```typescript
+import { ResultProcessor } from 'scrapql';
 
-
-const processResult = processorInstance(
-  process.result.properties({
+// Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
+const processResult: ResultProcessor<Result, Reporters, Ctx0> = process.result.properties({
     protocol: process.result.literal(),
-    get: process.result.properties({
-      reports: process.result.keys(
-        process.result.leaf((r: Reporters) => r.receiveReport)
-      ),
-      customers: process.result.ids(
-        (r: Reporters) => r.learnCustomerExistence,
-        process.result.leaf((r: Reporters) => r.receiveCustomer)
-      ),
-    }),
-  }),
-  reporters,
-  ctx0,
-);
+    reports: process.result.keys(
+      process.result.properties({
+        get: process.result.leaf((r: Reporters) => r.receiveReport)
+      }) as ResultProcessor<{ get: Either<Errors, Report> }, Reporters, Ctx<string>>,
+    ),
+    customers: process.result.ids(
+      (r: Reporters) => r.learnCustomerExistence,
+      process.result.properties({
+        get: process.result.leaf((r: Reporters) => r.receiveCustomer)
+      }),
+    ),
+  }) as ResultProcessor<Result, Reporters, Ctx0>;
 ```
 
+## Define a Protocol Bundle
+
+A scrapql protocol bundle contains all of the tools we created above.
+Creating one is not necessary but may be useful.
+
+```typescript
+import { Protocol } from 'scrapql';
+
+type Bundle = Protocol<
+  (q: Query) => Query,
+  (r: Result) => Result,
+  (e: Errors) => Errors,
+  Resolvers,
+  Reporters
+>;
+
+const exampleBundle: Partial<Bundle> = {
+  Query,
+  Result,
+  Err: Errors,
+  query: (q: Query) => q,
+  result: (r: Result) => r,
+  err: (e: Errors) => e,
+  processQuery,
+  processResult,
+}
+```
 
 ## Example Flow
 
@@ -323,7 +398,6 @@ async function server(request: string): Promise<string> {
       Either_.parseJSON(body, (reason) => [String(reason)]),
       TaskEither_.fromEither,
     )),
-    (x: TaskEither<Array<string>,unknown>) => x,
     TaskEither_.chain((json: unknown) => pipe(
       json,
       Query.decode,
@@ -331,7 +405,8 @@ async function server(request: string): Promise<string> {
       TaskEither_.fromEither,
     )),
     TaskEither_.chain((query: Query) => pipe(
-      processQuery(query),
+      processorInstance(processQuery, resolvers, ctx0),
+      (qp) => qp(query),
       Task_.map((result) => Either_.right(result)),
     )),
     Task_.map((result: Either<Errors, Result>) => tEither(Errors, Result).encode(result)),
@@ -370,9 +445,22 @@ async function client(query: Query): Promise<void> {
     )),
     TaskEither_.fold(
       (errors) => () => Promise.resolve(console.error(errors)),
-      (result: Result) => processResult(result),
+      (result: Result) => pipe(
+        processorInstance( processResult, reporters, ctx0 ),
+        (rp) => rp(result),
+      ),
     ),
   );
   return main();
 }
+```
+
+
+The following exports are used by test code.
+
+```typescript
+export { Bundle, Customer, CustomerId, Errors, Json, QUERY_PROTOCOL, Query,
+RESULT_PROTOCOL, Report, Result, Year, client, db, example, exampleBundle, exampleJsonQuery,
+exampleQuery, exampleResult, jsonQueryProcessor, packageName, packageVersion,
+processQuery, processResult, reporters, resolvers, server }
 ```

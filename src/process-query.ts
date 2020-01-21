@@ -9,6 +9,8 @@ import * as Option_ from 'fp-ts/lib/Option';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import { pipe } from 'fp-ts/lib/pipeable';
 
+import { Dict } from './dict';
+import * as Dict_ from './dict';
 import { Prepend } from './tuple';
 import * as Context_ from './tuple';
 import {
@@ -73,7 +75,7 @@ export function leaf<
 export function keys<
   A extends Resolvers,
   Q extends KeysQuery<SQ, K>,
-  K extends Key & keyof Q,
+  K extends Key,
   SQ extends Query,
   SR extends Result,
   C extends Context
@@ -84,7 +86,7 @@ export function keys<
     return (resolvers) =>
       pipe(
         query,
-        Record_.mapWithIndex(
+        Dict_.mapWithIndex(
           (key: K, subQuery: SQ): Task<SR> => {
             const subContext = pipe(
               context,
@@ -93,7 +95,7 @@ export function keys<
             return subProcessor(subQuery)(subContext)(resolvers);
           },
         ),
-        Record_.sequence(task),
+        Dict_.sequenceTask,
       );
   };
 }
@@ -114,9 +116,9 @@ export function ids<
 ): QueryProcessor<Q, IdsResult<SR, I, E>, A, C> {
   return (query: Q) => (context: C): ReaderTask<A, IdsResult<SR, I, E>> => {
     return (resolvers) => {
-      const tasks: Record<I, TaskEither<E, Option<SR>>> = pipe(
+      const tasks: Dict<I, TaskEither<E, Option<SR>>> = pipe(
         query,
-        Record_.mapWithIndex(
+        Dict_.mapWithIndex(
           (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
             const subContext = pipe(
               context,
@@ -143,7 +145,7 @@ export function ids<
           },
         ),
       );
-      return Record_.sequence(task)(tasks);
+      return Dict_.sequenceTask(tasks);
     };
   };
 }

@@ -12,6 +12,7 @@ import * as Either_ from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { identity } from 'fp-ts/lib/function';
 
+import * as Dict_ from './dict';
 import { Prepend } from './tuple';
 import * as Context_ from './tuple';
 
@@ -65,7 +66,7 @@ export function leaf<A extends Reporters, R extends LeafResult, C extends Contex
 export function keys<
   A extends Reporters,
   R extends KeysResult<SR, K>,
-  K extends Key & keyof R,
+  K extends Key,
   SR extends Result,
   C extends Context
 >(subProcessor: ResultProcessor<SR, A, Prepend<K, C>>): ResultProcessor<R, A, C> {
@@ -73,14 +74,13 @@ export function keys<
     return (reporters) => {
       const tasks: Array<Task<void>> = pipe(
         result,
-        Record_.mapWithIndex((key: K, subResult: SR) => {
+        Dict_.mapWithIndex((key: K, subResult: SR) => {
           const subContext = pipe(
             context,
             Context_.prepend(key),
           );
           return subProcessor(subResult)(subContext)(reporters);
         }),
-        Record_.toUnfoldable(array),
         Array_.map(([_k, v]) => v),
       );
       return Foldable_.traverse_(taskSeq, array)(tasks, identity);
@@ -105,7 +105,7 @@ export function ids<
     return (reporters) => {
       const tasks: Array<Task<void>> = pipe(
         result,
-        Record_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
+        Dict_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
           const subContext = pipe(
             context,
             Context_.prepend(id),
@@ -130,7 +130,6 @@ export function ids<
             ),
           );
         }),
-        Record_.toUnfoldable(array),
         Array_.map(([_k, v]) => v),
         Array_.flatten,
       );

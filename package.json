@@ -27,7 +27,7 @@
     "typecheck": "tsc -p src/tsconfig.json",
     "eslint": "eslint --max-warnings=0 '**/*.{ts,js,json}' --ignore-path .gitignore",
     "lint": "yarn eslint",
-    "ci": "yarn lint && yarn typecheck && yarn test && yarn build",
+    "ci": "yarn readme-ts && yarn lint && yarn typecheck && yarn test && yarn build",
     "deploy-npm": "yarn ci && yarn publish --non-interactive"
   },
   "peerDependencies": {
@@ -46,6 +46,7 @@
     "eslint-plugin-prettier": "^3.1.0",
     "fp-ts": "^2.3.1",
     "io-ts": "^2.0.2",
+    "io-ts-promise": "^2.0.2",
     "io-ts-types": "^0.5.3",
     "jest": "^24.8.0",
     "monocle-ts": "^2.0.0",
