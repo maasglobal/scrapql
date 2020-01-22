@@ -11,8 +11,8 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import { Dict } from './dict';
 import * as Dict_ from './dict';
-import { Prepend } from './tuple';
-import * as Context_ from './tuple';
+import { Prepend } from './onion';
+import * as Context_ from './onion';
 import {
   Query,
   Result,

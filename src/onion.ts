@@ -6,6 +6,6 @@ export const prepend = <N>(n: N) => <C extends Zero | Prepend<any, any>>(
   c: C,
 ): Prepend<N, C> => [n, c];
 
-export type Tuple<N, C extends Tuple<any, any>> = Zero | Prepend<N, C>;
+export type Onion<N, C extends Onion<any, any>> = Zero | Prepend<N, C>;
 
 export {};
