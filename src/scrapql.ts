@@ -198,20 +198,20 @@ export type QueryUtils<
   RC extends ResultConstructor,
   QA extends Resolvers
 > = {
-  Query: t.Type<ReturnType<QC>>;
+  Query: t.Type<ReturnType<QC>, Json>;
   query: QC;
   processQuery: QueryProcessor<ReturnType<QC>, ReturnType<RC>, QA>;
 };
 
 export type ResultUtils<RC extends ResultConstructor, RA extends Reporters> = {
-  Result: t.Type<ReturnType<RC>>;
+  Result: t.Type<ReturnType<RC>, Json>;
   result: RC;
   processResult: ResultProcessor<ReturnType<RC>, RA>;
   reduceResult: ResultReducer<ReturnType<RC>>;
 };
 
 export type ErrUtils<EC extends ErrConstructor> = {
-  Err: t.Type<ReturnType<EC>>;
+  Err: t.Type<ReturnType<EC>, Json>;
   err: EC;
 };
 
