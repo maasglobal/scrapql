@@ -13,8 +13,8 @@ import { pipe } from 'fp-ts/lib/pipeable';
 import { identity } from 'fp-ts/lib/function';
 
 import * as Dict_ from './dict';
-import { Prepend } from './tuple';
-import * as Context_ from './tuple';
+import { Prepend } from './onion';
+import * as Onion_ from './onion';
 
 import {
   ResultProcessor,
@@ -77,7 +77,7 @@ export function keys<
         Dict_.mapWithIndex((key: K, subResult: SR) => {
           const subContext = pipe(
             context,
-            Context_.prepend(key),
+            Onion_.prepend(key),
           );
           return subProcessor(subResult)(subContext)(reporters);
         }),
@@ -108,7 +108,7 @@ export function ids<
         Dict_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
           const subContext = pipe(
             context,
-            Context_.prepend(id),
+            Onion_.prepend(id),
           );
           return pipe(
             maybeSubResult,

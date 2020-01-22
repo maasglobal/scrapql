@@ -7,7 +7,7 @@ import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { pipe } from 'fp-ts/lib/pipeable';
 import * as Option_ from 'fp-ts/lib/Option';
 
-import { Zero, zero, Prepend, prepend, Tuple } from './tuple';
+import { Zero, zero, Prepend, prepend, Onion } from './onion';
 import { Dict } from './dict';
 
 export { process } from './process';
@@ -25,27 +25,27 @@ export type Args<T extends any = any> = Array<T>;
 export type Ctx0 = Zero;
 export const ctx0 = zero;
 
-export type Ctx<N, C extends Tuple<any, any> = Zero> = Prepend<N, C>;
-export function ctx<N, A = never, B extends Tuple<any, any> = Zero>(
+export type Ctx<N, C extends Onion<any, any> = Zero> = Prepend<N, C>;
+export function ctx<N, A = never, B extends Onion<any, any> = Zero>(
   n: N,
 ): Prepend<N, Zero>;
-export function ctx<N, A = never, B extends Tuple<any, any> = Zero>(
+export function ctx<N, A = never, B extends Onion<any, any> = Zero>(
   n: N,
   c: Zero,
 ): Prepend<N, Zero>;
-export function ctx<N, A = never, B extends Tuple<any, any> = Zero>(
+export function ctx<N, A = never, B extends Onion<any, any> = Zero>(
   n: N,
   c: Prepend<A, B>,
 ): Prepend<N, Prepend<A, B>>;
-export function ctx<N, A = never, B extends Tuple<any, any> = Zero>(
+export function ctx<N, A = never, B extends Onion<any, any> = Zero>(
   n: N,
-  c?: Tuple<A, B>,
-): Prepend<N, Tuple<A, B>> {
+  c?: Onion<A, B>,
+): Prepend<N, Onion<A, B>> {
   return pipe(
     Option_.fromNullable(c),
     Option_.fold(
       () => prepend(n)(ctx0),
-      (old: Tuple<A, B>): Prepend<N, Tuple<A, B>> => prepend(n)(old),
+      (old: Onion<A, B>): Prepend<N, Onion<A, B>> => prepend(n)(old),
     ),
   );
 }
