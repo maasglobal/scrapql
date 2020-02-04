@@ -34,7 +34,7 @@ import {
   reduceeMismatch,
 } from './scrapql';
 
-export const literal = <L extends LiteralResult<any>>(
+export const literal = <L extends LiteralResult>(
   results: NonEmptyArray<L>,
 ): Either<ReduceFailure, L> =>
   pipe(
@@ -58,7 +58,7 @@ export const literal = <L extends LiteralResult<any>>(
     ),
   );
 
-export const leaf = <R extends LeafResult<any>>(
+export const leaf = <R extends LeafResult>(
   combineLeafResult: LeafResultCombiner<R>,
 ) => (results: NonEmptyArray<R>): Either<ReduceFailure, R> => {
   const writeResult: R = NonEmptyArray_.head(results);
@@ -71,7 +71,7 @@ export const leaf = <R extends LeafResult<any>>(
   return foob;
 };
 
-export const keys = <K extends Key<any>, SR extends Result<any>>(
+export const keys = <K extends Key, SR extends Result>(
   reduceSubResult: ResultReducer<SR>,
 ) => (
   results: NonEmptyArray<KeysResult<SR, K>>,
@@ -89,7 +89,7 @@ export const keys = <K extends Key<any>, SR extends Result<any>>(
     Either_.chain(Dict_.sequenceEither),
   );
 
-export const ids = <I extends Id<any>, E extends Err<any>, SR extends Result<any>>(
+export const ids = <I extends Id, E extends Err, SR extends Result>(
   reduceSubResult: ResultReducer<SR>,
   existenceChange: Lazy<E>,
 ) => (
@@ -136,10 +136,10 @@ export const ids = <I extends Id<any>, E extends Err<any>, SR extends Result<any
   );
 
 export const search = <
-  T extends Terms<any>,
-  I extends Id<any>,
-  E extends Err<any>,
-  SR extends Result<any>
+  T extends Terms,
+  I extends Id,
+  E extends Err,
+  SR extends Result
 >(
   reduceSubResult: ResultReducer<SR>,
   matchChange: Lazy<E>,
@@ -174,7 +174,7 @@ export const search = <
     ),
   );
 
-export const properties = <R extends PropertiesResult<any>>(
+export const properties = <R extends PropertiesResult>(
   processors: ResultReducerMapping<R>,
 ) => <P extends Property & keyof R>(results: NonEmptyArray<R>): R =>
   pipe(

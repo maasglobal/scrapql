@@ -30,14 +30,14 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 }
 
 describe('result', () => {
-  type Reporters = scrapql.Reporters<{
+  type Reporters = {
     learnProperty1Existence: (
       r: Either<Err1, scrapql.Existence>,
       c: Ctx<Id>,
     ) => Task<void>;
     receiveKeyResult: (r: KeyResult, c: Ctx<Key, Ctx<Id>>) => Task<void>;
     receiveProperty2Result: (r: Property2Result, c: Ctx0) => Task<void>;
-  }>;
+  };
 
   function createReporters(): Reporters {
     return {

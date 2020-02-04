@@ -53,11 +53,9 @@ export function literal<
 
 // leaf result contains part of the payload
 
-export function leaf<
-  A extends Reporters,
-  R extends LeafResult,
-  C extends Context
->(connect: ReporterConnector<A, R, C>): ResultProcessor<R, A, C> {
+export function leaf<A extends Reporters, R extends LeafResult, C extends Context>(
+  connect: ReporterConnector<A, R, C>,
+): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
       const reporter = connect(reporters);

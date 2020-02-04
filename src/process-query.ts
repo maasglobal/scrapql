@@ -7,7 +7,6 @@ import * as Task_ from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
 import * as Array_ from 'fp-ts/lib/Array';
-import { Either } from 'fp-ts/lib/Either';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import { pipe } from 'fp-ts/lib/pipeable';
 
@@ -44,6 +43,9 @@ import {
   PropertiesResult,
   Existence,
   Err,
+  TermsQuery,
+  TermsResult,
+  termsQuery,
 } from './scrapql';
 
 // literal query contains static information that can be replaced with another literal
@@ -167,7 +169,7 @@ export function search<
   C extends Context,
   E extends Err
 >(
-  connect: ResolverConnector<A, T, Either<E, Array<I>>, C>,
+  connect: ResolverConnector<A, TermsQuery<T>, TermsResult<I, E>, C>,
   subProcessor: QueryProcessor<SQ, SR, A, Prepend<I, C>>,
 ): QueryProcessor<Q, SearchResult<SR, T, I, E>, A, C> {
   return (query: Q) => (context: C): ReaderTask<A, SearchResult<SR, T, I, E>> => {
@@ -178,7 +180,7 @@ export function search<
           (terms: T, subQuery: SQ): TaskEither<E, Dict<I, SR>> => {
             const idResolver = connect(resolvers);
             return pipe(
-              idResolver(terms, context),
+              idResolver(termsQuery(terms), context),
               TaskEither_.chain(
                 (ids: Array<I>): TaskEither<E, Dict<I, SR>> =>
                   pipe(
