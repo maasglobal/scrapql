@@ -1,11 +1,16 @@
 import * as t from 'io-ts';
 
+import { NonEmptyArray, nonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { Task, task } from 'fp-ts/lib/Task';
-import { Option } from 'fp-ts/lib/Option';
+import { Either, either } from 'fp-ts/lib/Either';
+import { Option, option } from 'fp-ts/lib/Option';
 import { sequenceT } from 'fp-ts/lib/Apply';
 import { array } from 'fp-ts/lib/Array';
 import * as Option_ from 'fp-ts/lib/Option';
 import * as Array_ from 'fp-ts/lib/Array';
+import * as boolean_ from 'fp-ts/lib/boolean';
+import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
+import { sequenceS } from 'fp-ts/lib/Apply';
 import { pipe } from 'fp-ts/lib/pipeable';
 
 export const Dict = <KeyC extends t.Mixed, ValueC extends t.Mixed>(K: KeyC, V: ValueC) =>
@@ -13,7 +18,7 @@ export const Dict = <KeyC extends t.Mixed, ValueC extends t.Mixed>(K: KeyC, V: V
 export type Dict<K, V> = Array<[K, V]>;
 export const dict = <D extends Dict<any, any>>(...d: D): D => d;
 
-export function mapWithIndex<K extends string, A, B>(
+export function mapWithIndex<K, A, B>(
   f: (k: K, a: A) => B,
 ): (fa: Dict<K, A>) => Dict<K, B> {
   return (fa: Dict<K, A>) =>
@@ -23,21 +28,33 @@ export function mapWithIndex<K extends string, A, B>(
     );
 }
 
-export function sequenceKV<K extends string, V>([k, v]: [K, Task<V>]): Task<[K, V]> {
+export function sequenceKVTask<K, V>([k, v]: [K, Task<V>]): Task<[K, V]> {
   return sequenceT(task)(task.of(k), v);
 }
 
-export function sequenceTask<K extends string, V>(
-  dict: Dict<K, Task<V>>,
-): Task<Dict<K, V>> {
+export function sequenceTask<K, V>(dict: Dict<K, Task<V>>): Task<Dict<K, V>> {
   return pipe(
     dict,
-    Array_.map(sequenceKV),
+    Array_.map(sequenceKVTask),
     array.sequence(task),
   );
 }
 
-export function lookup<K extends string>(k: K) {
+export function sequenceKVEither<K, V, E>([k, v]: [K, Either<E, V>]): Either<E, [K, V]> {
+  return sequenceT(either)(either.of(k), v);
+}
+
+export function sequenceEither<K, V, E>(
+  dict: Dict<K, Either<E, V>>,
+): Either<E, Dict<K, V>> {
+  return pipe(
+    dict,
+    Array_.map(sequenceKVEither),
+    array.sequence(either),
+  );
+}
+
+export function lookup<K>(k: K) {
   return <V>(dict: Dict<K, V>): Option<V> =>
     pipe(
       dict,
@@ -46,7 +63,7 @@ export function lookup<K extends string>(k: K) {
     );
 }
 
-export function keys<K extends string>(dict: Dict<K, unknown>): Array<K> {
+export function keys<K>(dict: Dict<K, unknown>): Array<K> {
   return pipe(
     dict,
     Array_.map(([k, _v]) => k),
@@ -59,3 +76,46 @@ export function values<V>(dict: Dict<unknown, V>): Array<V> {
     Array_.map(([_k, v]) => v),
   );
 }
+
+// returns Some if all values are equal or None if some values differ
+const reduceDuplicateKeys = <T>(duplicates: NonEmptyArray<T>): Option<T> =>
+  pipe(
+    duplicates,
+    Array_.uniq({ equals: (a: T, b: T) => a === b }),
+    NonEmptyArray_.fromArray,
+    Option_.chain(
+      ([k, ...ks]: NonEmptyArray<T>): Option<T> =>
+        pipe(
+          ks.length === 0,
+          boolean_.fold(() => Option_.none, () => Option_.some(k)),
+        ),
+    ),
+  );
+
+export const mergeSymmetric = <A, B>(
+  reduceValues: (vs: NonEmptyArray<A>) => Option<B>,
+) => <K>(dicts: NonEmptyArray<Dict<K, A>>): Option<Dict<K, B>> =>
+  pipe(
+    dicts,
+    nonEmptyArray.sequence(array),
+    Array_.map(
+      (variants: NonEmptyArray<[K, A]>): Option<[K, B]> =>
+        pipe(
+          {
+            k: pipe(
+              variants,
+              NonEmptyArray_.map(([k, _v]) => k),
+              reduceDuplicateKeys,
+            ),
+            v: pipe(
+              variants,
+              NonEmptyArray_.map(([_k, v]) => v),
+              reduceValues,
+            ),
+          },
+          sequenceS(option),
+          Option_.map(({ k, v }) => [k, v]),
+        ),
+    ),
+    array.sequence(option),
+  );

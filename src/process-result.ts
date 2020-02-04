@@ -12,6 +12,7 @@ import * as Either_ from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { identity } from 'fp-ts/lib/function';
 
+import { Dict } from './dict';
 import * as Dict_ from './dict';
 import { Prepend } from './onion';
 import * as Onion_ from './onion';
@@ -30,6 +31,8 @@ import {
   Id,
   ExistenceResult,
   IdsResult,
+  Terms,
+  SearchResult,
   Property,
   PropertiesResult,
   Existence,
@@ -39,8 +42,8 @@ import {
 // literal result is known on forehand so we throw it away
 
 export function literal<
-  A extends Reporters,
-  R extends LiteralResult,
+  A extends Reporters<any>,
+  R extends LiteralResult<any>,
   C extends Context
 >(): ResultProcessor<R, A, C> {
   return (_result: R) => (_context: C): ReaderTask<A, void> => {
@@ -50,9 +53,11 @@ export function literal<
 
 // leaf result contains part of the payload
 
-export function leaf<A extends Reporters, R extends LeafResult, C extends Context>(
-  connect: ReporterConnector<A, R, C>,
-): ResultProcessor<R, A, C> {
+export function leaf<
+  A extends Reporters<any>,
+  R extends LeafResult<any>,
+  C extends Context
+>(connect: ReporterConnector<A, R, C>): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
       const reporter = connect(reporters);
@@ -64,10 +69,10 @@ export function leaf<A extends Reporters, R extends LeafResult, C extends Contex
 // keys result contains data that always exists in database
 
 export function keys<
-  A extends Reporters,
+  A extends Reporters<any>,
   R extends KeysResult<SR, K>,
-  K extends Key,
-  SR extends Result,
+  K extends Key<any>,
+  SR extends Result<any>,
   C extends Context
 >(subProcessor: ResultProcessor<SR, A, Prepend<K, C>>): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
@@ -91,12 +96,12 @@ export function keys<
 // ids result contains data that may not exist in database
 
 export function ids<
-  A extends Reporters,
+  A extends Reporters<any>,
   R extends IdsResult<SR, I, E>,
-  I extends Id,
-  SR extends Result,
+  I extends Id<any>,
+  SR extends Result<any>,
   C extends Context,
-  E extends Err
+  E extends Err<any>
 >(
   connect: ReporterConnector<A, ExistenceResult<E>, Prepend<I, C>>,
   subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
@@ -138,11 +143,75 @@ export function ids<
   };
 }
 
+// search result contains data that may contain zero or more instances in the database
+
+export function search<
+  A extends Reporters<any>,
+  R extends SearchResult<SR, T, I, E>,
+  T extends Terms<any>,
+  I extends Id<any>,
+  SR extends Result<any>,
+  C extends Context,
+  E extends Err<any>
+>(
+  connect: ReporterConnector<A, Either<E, Array<I>>, Prepend<T, C>>,
+  subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
+): ResultProcessor<R, A, C> {
+  return (result: R) => (context: C): ReaderTask<A, void> => {
+    return (reporters) => {
+      const tasks: Array<Task<void>> = pipe(
+        result,
+        Dict_.mapWithIndex(
+          (terms: T, maybeSubResult: Either<E, Dict<I, SR>>): Array<Task<void>> => {
+            const termsContext = pipe(
+              context,
+              Onion_.prepend(terms),
+            );
+            return pipe(
+              maybeSubResult,
+              Either_.fold(
+                (err) => [
+                  connect(reporters)(Either_.left<E, Array<I>>(err), termsContext),
+                ],
+                (subResults: Dict<I, SR>): Array<Task<void>> => {
+                  const reportIds: Task<void> = pipe(
+                    Dict_.keys(subResults),
+                    (ids: Array<I>): Task<void> =>
+                      connect(reporters)(Either_.right<E, Array<I>>(ids), termsContext),
+                  );
+                  const reportResults: Array<Task<void>> = pipe(
+                    subResults,
+                    Array_.map(([id, subResult]: [I, SR]) => {
+                      const idContext = pipe(
+                        context,
+                        Onion_.prepend(id),
+                      );
+                      return subProcessor(subResult)(idContext)(reporters);
+                    }),
+                  );
+                  return pipe(
+                    [[reportIds], reportResults],
+                    Array_.flatten,
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        (x: Dict<T, Array<Task<void>>>) => x,
+        Array_.map(([_k, v]) => v),
+        Array_.flatten,
+      );
+      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+    };
+  };
+}
+
 // properties result contains results for a set of optional queries
 
 export function properties<
-  A extends Reporters,
-  R extends PropertiesResult,
+  A extends Reporters<any>,
+  R extends PropertiesResult<any>,
   C extends Context
 >(processors: ResultProcessorMapping<A, R, C>): ResultProcessor<R, A, C> {
   return <P extends Property & keyof R>(result: R) => (

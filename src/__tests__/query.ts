@@ -35,11 +35,11 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 describe('query', () => {
   /* eslint-disable @typescript-eslint/no-use-before-define */
 
-  interface Resolvers extends scrapql.Resolvers {
+  type Resolvers = scrapql.Resolvers<{
     checkProperty1Existence: (q: Id) => TaskEither<Err1, scrapql.Existence>;
     fetchKeyResult: (q: KeyQuery, c: Ctx<Key, Ctx<Id>>) => Task<KeyResult>;
     fetchProperty2Result: (q: Property2Query, c: Ctx0) => Task<Property2Result>;
-  }
+  }>;
 
   function createResolvers(): Resolvers {
     return {

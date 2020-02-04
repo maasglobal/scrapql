@@ -164,11 +164,16 @@ export type QueryProcessorMapping<
   [I in keyof Q & keyof R]: QueryProcessor<Required<Q>[I], Required<R>[I], A, C>;
 };
 
-export type Results<R extends Result> = NonEmptyArray<R>;
-export type ResultReducer<R extends Result> = (r: Results<R>) => R;
-export type LeafResultCombiner<R extends Result> = (w: R, r: R) => R;
+const MISMATCH = 'Structural mismatch';
+export type ReduceeMismatch = typeof MISMATCH;
+export const reduceeMismatch: ReduceeMismatch = MISMATCH;
 
-export type ResultReducerMapping<R extends PropertiesResult> = {
+export type ReduceFailure = ReduceeMismatch;
+
+export type ResultReducer<R extends Result<any>> = (r: NonEmptyArray<R>) => Either<ReduceFailure, R>;
+export type LeafResultCombiner<R extends Result<any>> = (w: R, r: R) => R;
+
+export type ResultReducerMapping<R extends PropertiesResult<any>> = {
   [I in keyof R]: ResultReducer<Required<R>[I]>;
 };
 
