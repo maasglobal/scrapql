@@ -6,6 +6,7 @@ import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import * as Task_ from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
+import * as Array_ from 'fp-ts/lib/Array';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import { pipe } from 'fp-ts/lib/pipeable';
 
@@ -27,17 +28,23 @@ import {
   KeysQuery,
   Id,
   IdsQuery,
+  Terms,
+  TermsResult,
+  TermsQuery,
+  termsQuery,
+  SearchQuery,
   Property,
   PropertiesQuery,
   LiteralResult,
   LeafResult,
   KeysResult,
+  Existence,
   ExistenceResult,
   ExistenceQuery,
   existenceQuery,
   IdsResult,
+  SearchResult,
   PropertiesResult,
-  Existence,
   Err,
 } from './scrapql';
 
@@ -100,7 +107,7 @@ export function keys<
   };
 }
 
-// keys query requests some information that may not be present in database
+// ids query requests some information that may not be present in database
 
 export function ids<
   A extends Resolvers,
@@ -140,6 +147,55 @@ export function ids<
                       ),
                   ),
                 ),
+              ),
+            );
+          },
+        ),
+      );
+      return Dict_.sequenceTask(tasks);
+    };
+  };
+}
+
+// search query requests some information that may zero or more instances in the database
+
+export function search<
+  A extends Resolvers,
+  Q extends SearchQuery<SQ, T>,
+  T extends Terms,
+  I extends Id,
+  SQ extends Query,
+  SR extends Result,
+  C extends Context,
+  E extends Err
+>(
+  connect: ResolverConnector<A, TermsQuery<T>, TermsResult<I, E>, C>,
+  subProcessor: QueryProcessor<SQ, SR, A, Prepend<I, C>>,
+): QueryProcessor<Q, SearchResult<SR, T, I, E>, A, C> {
+  return (query: Q) => (context: C): ReaderTask<A, SearchResult<SR, T, I, E>> => {
+    return (resolvers) => {
+      const tasks: Dict<T, TaskEither<E, Dict<I, SR>>> = pipe(
+        query,
+        Dict_.mapWithIndex(
+          (terms: T, subQuery: SQ): TaskEither<E, Dict<I, SR>> => {
+            const idResolver = connect(resolvers);
+            return pipe(
+              idResolver(termsQuery(terms), context),
+              TaskEither_.chain(
+                (ids: Array<I>): TaskEither<E, Dict<I, SR>> =>
+                  pipe(
+                    ids,
+                    Array_.map((id: I): [I, Task<SR>] => {
+                      const subContext = pipe(
+                        context,
+                        Context_.prepend(id),
+                      );
+                      const subResult = subProcessor(subQuery)(subContext)(resolvers);
+                      return [id, subResult];
+                    }),
+                    Dict_.sequenceTask,
+                    TaskEither_.rightTask,
+                  ),
               ),
             );
           },

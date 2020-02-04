@@ -62,17 +62,31 @@ export type LiteralQuery = Json;
 export type LeafQuery = Json;
 export type KeysQuery<SQ extends Query = Json, K extends Key = Key> = Dict<K, SQ>;
 export type IdsQuery<SQ extends Query = Json, I extends Id = Id> = Dict<I, SQ>;
+export type SearchQuery<SQ extends Query = Json, T extends Terms = Terms> = Dict<T, SQ>;
 export type PropertiesQuery<
   Q extends { [I in Property]: Query } = { [I in Property]: Json }
 > = Partial<Q>;
+export type Terms = Json;
+export type TermsQuery<Q extends Terms> = Q & {
+  readonly TermsQuery: unique symbol;
+};
+export const termsQuery = <T extends Terms>(terms: T): TermsQuery<T> =>
+  terms as TermsQuery<T>;
 
 export type FetchableQuery = LeafQuery | ExistenceQuery<any>;
-export type StructuralQuery = LiteralQuery | KeysQuery | IdsQuery | PropertiesQuery;
+export type StructuralQuery =
+  | LiteralQuery
+  | KeysQuery
+  | IdsQuery
+  | SearchQuery
+  | PropertiesQuery;
 
 export type Query = StructuralQuery | FetchableQuery;
 
 export type Existence = boolean;
 export type ExistenceResult<E extends Err = Err> = Either<E, Existence>;
+export type TermsResult<I extends Id, E extends Err> = Either<E, Array<I>>;
+
 export type LiteralResult = Json;
 export type LeafResult = Json;
 export type KeysResult<SR extends Result = Json, K extends Key = Key> = Dict<K, SR>;
@@ -81,12 +95,23 @@ export type IdsResult<
   I extends Id = Id,
   E extends Err = Err
 > = Dict<I, Either<E, Option<SR>>>;
+export type SearchResult<
+  SR extends Result = Json,
+  T extends Terms = Terms,
+  I extends Id = Id,
+  E extends Err = Err
+> = Dict<T, Either<E, Dict<I, SR>>>;
 export type PropertiesResult<
   R extends { [I in Property]: Result } = { [I in Property]: Json }
 > = Partial<R>;
 
 export type ReportableResult = LeafResult | ExistenceResult;
-export type StructuralResult = LiteralResult | KeysResult | IdsResult | PropertiesResult;
+export type StructuralResult =
+  | LiteralResult
+  | KeysResult
+  | IdsResult
+  | SearchResult
+  | PropertiesResult;
 
 export type Result = StructuralResult | ReportableResult;
 
@@ -164,11 +189,18 @@ export type QueryProcessorMapping<
   [I in keyof Q & keyof R]: QueryProcessor<Required<Q>[I], Required<R>[I], A, C>;
 };
 
-export type Results<R extends Result> = NonEmptyArray<R>;
-export type ResultReducer<R extends Result> = (r: Results<R>) => R;
+const MISMATCH = 'Structural mismatch';
+export type ReduceeMismatch = typeof MISMATCH;
+export const reduceeMismatch: ReduceeMismatch = MISMATCH;
+
+export type ReduceFailure = ReduceeMismatch;
+
+export type ResultReducer<R extends Result> = (
+  r: NonEmptyArray<R>,
+) => Either<ReduceFailure, R>;
 export type LeafResultCombiner<R extends Result> = (w: R, r: R) => R;
 
-export type ResultReducerMapping<R extends PropertiesResult> = {
+export type ResultReducerMapping<R extends PropertiesResult<any>> = {
   [I in keyof R]: ResultReducer<Required<R>[I]>;
 };
 

@@ -4,6 +4,8 @@ import { Either } from 'fp-ts/lib/Either';
 import * as Either_ from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
+import * as Array_ from 'fp-ts/lib/Array';
+import { flow } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
 import { name, version } from '../../package.json';
@@ -35,11 +37,12 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 describe('query', () => {
   /* eslint-disable @typescript-eslint/no-use-before-define */
 
-  interface Resolvers extends scrapql.Resolvers {
+  type Resolvers = {
     checkProperty1Existence: (q: Id) => TaskEither<Err1, scrapql.Existence>;
+    resolveProperty3Terms: (q: Terms) => TaskEither<Err1, Array<Id>>;
     fetchKeyResult: (q: KeyQuery, c: Ctx<Key, Ctx<Id>>) => Task<KeyResult>;
     fetchProperty2Result: (q: Property2Query, c: Ctx0) => Task<Property2Result>;
-  }
+  };
 
   function createResolvers(): Resolvers {
     return {
@@ -52,6 +55,22 @@ describe('query', () => {
             Either_.chain((x: Either<Err1, Option<KeysResult>>) => x),
             Either_.map(Option_.isSome),
           ),
+        ),
+      ),
+      resolveProperty3Terms: loggerTask(
+        jest.fn(
+          ({ min, max }: Terms): Either<Err1, Array<Id>> =>
+            pipe(
+              Dict_.keys(property1Result),
+              Array_.filter(
+                flow(
+                  (i: Id): number => parseInt(i.slice(2), 10),
+                  (no: number) => no >= min && no <= max,
+                ),
+              ),
+              Either_.right,
+              (x: Either<Err1, Array<Id>>) => x,
+            ),
         ),
       ),
       fetchKeyResult: loggerTask(
@@ -78,6 +97,13 @@ describe('query', () => {
   type Id = string & ('id1' | 'id2');
   const id1: Id = 'id1';
   const id2: Id = 'id2';
+
+  type Terms = {
+    min: number;
+    max: number;
+  };
+  const terms: Terms = { min: 0, max: 1 };
+
   type Key = string;
   const key1: Key = 'key1';
 
@@ -184,23 +210,57 @@ describe('query', () => {
     expect(result).toEqual(property2Result);
   });
 
+  type Property3Result = Dict<Terms, Either<Err1, Dict<Id, KeysResult>>>;
+  type Property3Query = Dict<Terms, KeysQuery>;
+  const property3Query: Property3Query = dict([terms, keysQuery]);
+  const property3Result: Property3Result = dict([
+    terms,
+    Either_.right(dict([id1, keysResult])),
+  ]);
+  const processProperty3: CustomQP<
+    Property3Query,
+    Property3Result,
+    Ctx0
+  > = scrapql.process.query.search((r) => r.resolveProperty3Terms, processKeys);
+
+  it('processProperty3', async () => {
+    const resolvers = createResolvers();
+    const context: Ctx0 = ctx0;
+    const main = scrapql.processorInstance(processProperty3, resolvers, context)(
+      property3Query,
+    );
+    const result = await main();
+    expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
+    expect((resolvers.resolveProperty3Terms as any).mock.calls).toMatchObject([
+      [terms, []],
+    ]);
+    expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [key1Query, ctx(key1, ctx(id1))],
+    ]);
+    expect(result).toEqual(property3Result);
+  });
+
   type RootResult = Partial<{
     protocol: typeof RESULT;
     property1: Property1Result;
     property2: Property2Result;
+    property3: Property3Result;
   }>;
   type RootQuery = Partial<{
     protocol: typeof QUERY;
     property1: Property1Query;
     property2: Property2Query;
+    property3: Property3Query;
   }>;
   const rootResult: RootResult = {
     protocol: RESULT,
     property1: property1Result,
+    property3: property3Result,
   };
   const rootQuery: RootQuery = {
     protocol: QUERY,
     property1: property1Query,
+    property3: property3Query,
   };
 
   it('processRoot (composed)', async () => {
@@ -212,6 +272,7 @@ describe('query', () => {
       protocol: scrapql.process.query.literal(RESULT),
       property1: processProperty1,
       property2: processProperty2,
+      property3: processProperty3,
     });
 
     const resolvers = createResolvers();
@@ -224,7 +285,11 @@ describe('query', () => {
       ctx(id1),
       ctx(id2),
     ]);
+    expect((resolvers.resolveProperty3Terms as any).mock.calls).toMatchObject([
+      [terms, []],
+    ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [key1Query, ctx(key1, ctx(id1))],
       [key1Query, ctx(key1, ctx(id1))],
     ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
@@ -251,6 +316,17 @@ describe('query', () => {
         >(scrapql.process.query.leaf((r: Resolvers) => r.fetchKeyResult)),
       ),
       property2: scrapql.process.query.leaf((r: Resolvers) => r.fetchProperty2Result),
+      property3: scrapql.process.query.search(
+        (r) => r.resolveProperty3Terms,
+        scrapql.process.query.keys<
+          Resolvers,
+          KeysQuery,
+          Key,
+          KeyQuery,
+          KeyResult,
+          Ctx<Id>
+        >(scrapql.process.query.leaf((r: Resolvers) => r.fetchKeyResult)),
+      ),
     });
 
     const resolvers = createResolvers();
@@ -262,7 +338,11 @@ describe('query', () => {
       ctx(id1),
       ctx(id2),
     ]);
+    expect((resolvers.resolveProperty3Terms as any).mock.calls).toMatchObject([
+      [terms, []],
+    ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
+      [key1Query, ctx(key1, ctx(id1))],
       [key1Query, ctx(key1, ctx(id1))],
     ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
