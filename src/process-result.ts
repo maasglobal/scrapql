@@ -42,8 +42,8 @@ import {
 // literal result is known on forehand so we throw it away
 
 export function literal<
-  A extends Reporters<any>,
-  R extends LiteralResult<any>,
+  A extends Reporters,
+  R extends LiteralResult,
   C extends Context
 >(): ResultProcessor<R, A, C> {
   return (_result: R) => (_context: C): ReaderTask<A, void> => {
@@ -54,8 +54,8 @@ export function literal<
 // leaf result contains part of the payload
 
 export function leaf<
-  A extends Reporters<any>,
-  R extends LeafResult<any>,
+  A extends Reporters,
+  R extends LeafResult,
   C extends Context
 >(connect: ReporterConnector<A, R, C>): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
@@ -69,10 +69,10 @@ export function leaf<
 // keys result contains data that always exists in database
 
 export function keys<
-  A extends Reporters<any>,
+  A extends Reporters,
   R extends KeysResult<SR, K>,
-  K extends Key<any>,
-  SR extends Result<any>,
+  K extends Key,
+  SR extends Result,
   C extends Context
 >(subProcessor: ResultProcessor<SR, A, Prepend<K, C>>): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
@@ -96,12 +96,12 @@ export function keys<
 // ids result contains data that may not exist in database
 
 export function ids<
-  A extends Reporters<any>,
+  A extends Reporters,
   R extends IdsResult<SR, I, E>,
-  I extends Id<any>,
-  SR extends Result<any>,
+  I extends Id,
+  SR extends Result,
   C extends Context,
-  E extends Err<any>
+  E extends Err
 >(
   connect: ReporterConnector<A, ExistenceResult<E>, Prepend<I, C>>,
   subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
@@ -146,13 +146,13 @@ export function ids<
 // search result contains data that may contain zero or more instances in the database
 
 export function search<
-  A extends Reporters<any>,
+  A extends Reporters,
   R extends SearchResult<SR, T, I, E>,
-  T extends Terms<any>,
-  I extends Id<any>,
-  SR extends Result<any>,
+  T extends Terms,
+  I extends Id,
+  SR extends Result,
   C extends Context,
-  E extends Err<any>
+  E extends Err
 >(
   connect: ReporterConnector<A, Either<E, Array<I>>, Prepend<T, C>>,
   subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
@@ -210,8 +210,8 @@ export function search<
 // properties result contains results for a set of optional queries
 
 export function properties<
-  A extends Reporters<any>,
-  R extends PropertiesResult<any>,
+  A extends Reporters,
+  R extends PropertiesResult,
   C extends Context
 >(processors: ResultProcessorMapping<A, R, C>): ResultProcessor<R, A, C> {
   return <P extends Property & keyof R>(result: R) => (

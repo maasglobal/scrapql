@@ -158,14 +158,14 @@ export function ids<
 // search query requests some information that may zero or more instances in the database
 
 export function search<
-  A extends Resolvers<any>,
+  A extends Resolvers,
   Q extends SearchQuery<SQ, T>,
-  T extends Terms<any>,
-  I extends Id<any>,
-  SQ extends Query<any>,
-  SR extends Result<any>,
+  T extends Terms,
+  I extends Id,
+  SQ extends Query,
+  SR extends Result,
   C extends Context,
-  E extends Err<any>
+  E extends Err
 >(
   connect: ResolverConnector<A, T, Either<E, Array<I>>, C>,
   subProcessor: QueryProcessor<SQ, SR, A, Prepend<I, C>>,
