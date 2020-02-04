@@ -170,10 +170,10 @@ export const reduceeMismatch: ReduceeMismatch = MISMATCH;
 
 export type ReduceFailure = ReduceeMismatch;
 
-export type ResultReducer<R extends Result<any>> = (
+export type ResultReducer<R extends Result> = (
   r: NonEmptyArray<R>,
 ) => Either<ReduceFailure, R>;
-export type LeafResultCombiner<R extends Result<any>> = (w: R, r: R) => R;
+export type LeafResultCombiner<R extends Result> = (w: R, r: R) => R;
 
 export type ResultReducerMapping<R extends PropertiesResult<any>> = {
   [I in keyof R]: ResultReducer<Required<R>[I]>;
