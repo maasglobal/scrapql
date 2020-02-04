@@ -9,7 +9,6 @@ import * as Record_ from 'fp-ts/lib/Record';
 import { Lazy } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-//import { Dict } from './dict';
 import * as Dict_ from './dict';
 import { mergeOption } from './option';
 
@@ -21,8 +20,8 @@ import {
   KeysResult,
   Id,
   IdsResult,
-  //Terms,
-  //SearchResult,
+  Terms,
+  SearchResult,
   Property,
   PropertiesResult,
   Err,
@@ -115,7 +114,7 @@ export const ids = <I extends Id, E extends Err, SR extends Result>(
     Either_.fromOption(() => reduceeMismatch),
     Either_.chain(Dict_.sequenceEither),
   );
-/*
+
 export const search = <T extends Terms, I extends Id, E extends Err, SR extends Result>(
   reduceSubResult: ResultReducer<SR>,
   matchChange: Lazy<E>,
@@ -124,32 +123,31 @@ export const search = <T extends Terms, I extends Id, E extends Err, SR extends 
 ): Either<ReduceFailure, SearchResult<SR, T, I, E>> =>
   pipe(
     results,
-    Dict_.mergeSymmetric(
-      (
-        subResultVariants: NonEmptyArray<Either<E, Dict<I, SR>>>,
-      ): Option<Either<E, Dict<I, SR>>> =>
-        pipe(
-          subResultVariants,
-          nonEmptyArray.sequence(either),
-          Either_.chain(
-            (optionalResults: NonEmptyArray<Dict<I, SR>>): Either<E, Dict<I, SR>> =>
+    Dict_.mergeSymmetric((subResultVariants) =>
+      pipe(
+        subResultVariants,
+        nonEmptyArray.sequence(either),
+        Either_.chain((optionalResults) =>
+          pipe(
+            optionalResults,
+            Dict_.mergeSymmetric((foo) =>
               pipe(
-                optionalResults,
-                Dict_.mergeSymmetric(reduceSubResult),
-                Either_.fromOption(matchChange),
+                reduceSubResult(foo),
+                Option_.some,
               ),
+            ),
+            Either_.fromOption(matchChange),
+            Either_.map(Dict_.sequenceEither),
           ),
-          Option_.some,
         ),
+        either.sequence(either),
+        Option_.some,
+      ),
     ),
-    Option_.getOrElse(
-      (): Dict<T, Either<E, Dict<I, SR>>> => {
-        // eslint-disable-next-line fp/no-throw
-        throw new Error('reduce error, search results are not symmetric');
-      },
-    ),
+    Either_.fromOption(() => reduceeMismatch),
+    Either_.chain(Dict_.sequenceEither),
   );
-*/
+
 export const properties = <R extends PropertiesResult>(
   processors: ResultReducerMapping<R>,
 ) => <P extends Property & keyof R>(
