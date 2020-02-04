@@ -65,6 +65,12 @@ export type IdsQuery<SQ extends Query = Json, I extends Id = Id> = Dict<I, SQ>;
 export type PropertiesQuery<
   Q extends { [I in Property]: Query } = { [I in Property]: Json }
 > = Partial<Q>;
+export type Terms<Q extends Json> = Q;
+export type TermsQuery<Q extends Terms<any>> = Q & {
+  readonly TermsQuery: unique symbol;
+};
+export const termsQuery = <T extends Terms<any>>(terms: T): TermsQuery<T> =>
+  terms as TermsQuery<T>;
 
 export type FetchableQuery = LeafQuery | ExistenceQuery<any>;
 export type StructuralQuery = LiteralQuery | KeysQuery | IdsQuery | PropertiesQuery;
@@ -89,6 +95,12 @@ export type ReportableResult = LeafResult | ExistenceResult;
 export type StructuralResult = LiteralResult | KeysResult | IdsResult | PropertiesResult;
 
 export type Result = StructuralResult | ReportableResult;
+export type SearchResult<
+  SR extends Result<any>,
+  T extends Terms<any>,
+  I extends Id<any>,
+  E extends Err<any>
+> = Dict<T, Either<E, Dict<I, SR>>>;
 
 export type ProcessorInstance<I, O> = (i: I) => Task<O>;
 export const processorInstance = <I, O, A extends API<any>, C extends Context>(
