@@ -97,12 +97,12 @@ export const ids = <I extends Id, E extends Err, SR extends Result>(
         pipe(
           subResultVariants,
           nonEmptyArray.sequence(either),
-          Either_.map((foobb) => mergeOption(foobb)),
+          Either_.map(mergeOption),
           Either_.chain(Either_.fromOption(existenceChange)),
-          Either_.map(nonEmptyArray.sequence(option)),
           Either_.map((bar) =>
             pipe(
               bar,
+              nonEmptyArray.sequence(option),
               Option_.map((subResultVariants) => reduceSubResult(subResultVariants)),
               option.sequence(either),
             ),
