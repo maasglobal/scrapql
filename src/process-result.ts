@@ -32,6 +32,7 @@ import {
   ExistenceResult,
   IdsResult,
   Terms,
+  TermsResult,
   SearchResult,
   Property,
   PropertiesResult,

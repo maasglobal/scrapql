@@ -163,7 +163,7 @@ export const properties = <R extends PropertiesResult>(
           (x: Either<ReduceFailure, R[P]>) => x,
         );
       },
-    )
+    ),
   ) as Record<P, Either<ReduceFailure, R[P]>>;
   const result: Either<ReduceFailure, Record<P, R[P]>> = Record_.sequence(either)(omg);
   return result as Either<ReduceFailure, R>;
