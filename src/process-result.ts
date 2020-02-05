@@ -12,6 +12,7 @@ import * as Either_ from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import { identity } from 'fp-ts/lib/function';
 
+import { Dict } from './dict';
 import * as Dict_ from './dict';
 import { Prepend } from './onion';
 import * as Onion_ from './onion';
@@ -30,6 +31,9 @@ import {
   Id,
   ExistenceResult,
   IdsResult,
+  Terms,
+  TermsResult,
+  SearchResult,
   Property,
   PropertiesResult,
   Existence,
@@ -130,6 +134,70 @@ export function ids<
             ),
           );
         }),
+        Array_.map(([_k, v]) => v),
+        Array_.flatten,
+      );
+      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+    };
+  };
+}
+
+// search result contains data that may contain zero or more instances in the database
+
+export function search<
+  A extends Reporters,
+  R extends SearchResult<SR, T, I, E>,
+  T extends Terms,
+  I extends Id,
+  SR extends Result,
+  C extends Context,
+  E extends Err
+>(
+  connect: ReporterConnector<A, TermsResult<I, E>, Prepend<T, C>>,
+  subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
+): ResultProcessor<R, A, C> {
+  return (result: R) => (context: C): ReaderTask<A, void> => {
+    return (reporters) => {
+      const tasks: Array<Task<void>> = pipe(
+        result,
+        Dict_.mapWithIndex(
+          (terms: T, maybeSubResult: Either<E, Dict<I, SR>>): Array<Task<void>> => {
+            const termsContext = pipe(
+              context,
+              Onion_.prepend(terms),
+            );
+            return pipe(
+              maybeSubResult,
+              Either_.fold(
+                (err) => [
+                  connect(reporters)(Either_.left<E, Array<I>>(err), termsContext),
+                ],
+                (subResults: Dict<I, SR>): Array<Task<void>> => {
+                  const reportIds: Task<void> = pipe(
+                    Dict_.keys(subResults),
+                    (ids: Array<I>): Task<void> =>
+                      connect(reporters)(Either_.right<E, Array<I>>(ids), termsContext),
+                  );
+                  const reportResults: Array<Task<void>> = pipe(
+                    subResults,
+                    Array_.map(([id, subResult]: [I, SR]) => {
+                      const idContext = pipe(
+                        context,
+                        Onion_.prepend(id),
+                      );
+                      return subProcessor(subResult)(idContext)(reporters);
+                    }),
+                  );
+                  return pipe(
+                    [[reportIds], reportResults],
+                    Array_.flatten,
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        (x: Dict<T, Array<Task<void>>>) => x,
         Array_.map(([_k, v]) => v),
         Array_.flatten,
       );
