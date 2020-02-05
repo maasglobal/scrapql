@@ -152,7 +152,7 @@ export function search<
   C extends Context,
   E extends Err
 >(
-  connect: ReporterConnector<A, Either<E, Array<I>>, Prepend<T, C>>,
+  connect: ReporterConnector<A, TermsResult<I, E>, Prepend<T, C>>,
   subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
 ): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
