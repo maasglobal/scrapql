@@ -35,6 +35,7 @@ describe('result', () => {
       r: Either<Err1, scrapql.Existence>,
       c: Ctx<Id>,
     ) => Task<void>;
+    learnProperty3Match: (r: Either<Err1, Array<Id>>, c: Ctx<Terms>) => Task<void>;
     receiveKeyResult: (r: KeyResult, c: Ctx<Key, Ctx<Id>>) => Task<void>;
     receiveProperty2Result: (r: Property2Result, c: Ctx0) => Task<void>;
   };
@@ -43,6 +44,9 @@ describe('result', () => {
     return {
       learnProperty1Existence: loggerTask(
         jest.fn((_0: Either<Err1, scrapql.Existence>, _1: Ctx<Id>) => undefined),
+      ),
+      learnProperty3Match: loggerTask(
+        jest.fn((_0: Either<Err1, Array<Id>>, _1: Ctx<Terms>) => undefined),
       ),
       receiveKeyResult: loggerTask(
         jest.fn((_0: KeyResult, _1: Ctx<Key, Ctx<Id>>) => undefined),
@@ -62,6 +66,13 @@ describe('result', () => {
   type Id = string & ('id1' | 'id2');
   const id1: Id = 'id1';
   const id2: Id = 'id2';
+
+  type Terms = {
+    min: number;
+    max: number;
+  };
+  const terms: Terms = { min: 0, max: 1 };
+
   type Key = string;
   const key1: Key = 'key1';
 
@@ -153,14 +164,48 @@ describe('result', () => {
     ]);
   });
 
+  type Property3Result = Dict<Terms, Either<Err1, Dict<Id, KeysResult>>>;
+  const property3Result: Property3Result = dict([
+    terms,
+    Either_.right(dict([id1, keysResult])),
+  ]);
+  const processProperty3: CustomRP<Property3Result, Ctx0> = scrapql.process.result.search<
+    Reporters,
+    Property3Result,
+    Terms,
+    Id,
+    KeysResult,
+    Ctx0,
+    Err1
+  >((r) => r.learnProperty3Match, processKeys);
+
+  it('processProperty3', async () => {
+    const reporters = createReporters();
+    const context: Ctx0 = ctx0;
+    const main = scrapql.processorInstance(processProperty3, reporters, context)(
+      property3Result,
+    );
+    await main();
+    // eslint-disable-next-line fp/no-mutating-methods
+    expect((reporters.learnProperty3Match as any).mock.calls.sort()).toMatchObject([
+      [Either_.right([id1]), ctx(terms)],
+    ]);
+    expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
+      [key1Result, ctx(key1, ctx(id1))],
+    ]);
+    expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
+  });
+
   type RootResult = Partial<{
     protocol: typeof RESULT;
     property1: Property1Result;
     property2: Property2Result;
+    property3: Property3Result;
   }>;
   const rootResult: RootResult = {
     protocol: RESULT,
     property1: property1Result,
+    property3: property3Result,
   };
 
   it('processRoot (composed)', async () => {
@@ -172,6 +217,7 @@ describe('result', () => {
       protocol: scrapql.process.result.literal(),
       property1: processProperty1,
       property2: processProperty2,
+      property3: processProperty3,
     });
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
@@ -182,7 +228,11 @@ describe('result', () => {
       [Either_.right(true), ctx(id1)],
       [Either_.right(false), ctx(id2)],
     ]);
+    expect((reporters.learnProperty3Match as any).mock.calls.sort()).toMatchObject([
+      [Either_.right([id1]), ctx(terms)],
+    ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
+      [key1Result, ctx(key1, ctx(id1))],
       [key1Result, ctx(key1, ctx(id1))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
@@ -207,6 +257,22 @@ describe('result', () => {
         ),
       ),
       property2: scrapql.process.result.leaf((r: Reporters) => r.receiveProperty2Result),
+      property3: scrapql.process.result.search<
+        Reporters,
+        Property3Result,
+        Terms,
+        Id,
+        KeysResult,
+        Ctx0,
+        Err1
+      >(
+        (r) => r.learnProperty3Match,
+        scrapql.process.result.keys<Reporters, KeysResult, Key, KeyResult, Ctx<Id>>(
+          scrapql.process.result.leaf<Reporters, KeyResult, Ctx<Key, Ctx<Id>>>(
+            (r: Reporters) => r.receiveKeyResult,
+          ),
+        ),
+      ),
     });
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
@@ -217,7 +283,11 @@ describe('result', () => {
       [Either_.right(true), ctx(id1)],
       [Either_.right(false), ctx(id2)],
     ]);
+    expect((reporters.learnProperty3Match as any).mock.calls.sort()).toMatchObject([
+      [Either_.right([id1]), ctx(terms)],
+    ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
+      [key1Result, ctx(key1, ctx(id1))],
       [key1Result, ctx(key1, ctx(id1))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);

@@ -231,10 +231,12 @@ describe('query', () => {
     );
     const result = await main();
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
+    expect((resolvers.resolveProperty3Terms as any).mock.calls).toMatchObject([
+      [terms, []],
+    ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
       [key1Query, ctx(key1, ctx(id1))],
     ]);
-    expect((resolvers.resolveProperty3Terms as any).mock.calls).toMatchObject([[terms, []]]);
     expect(result).toEqual(property3Result);
   });
 
@@ -282,6 +284,9 @@ describe('query', () => {
     expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([
       ctx(id1),
       ctx(id2),
+    ]);
+    expect((resolvers.resolveProperty3Terms as any).mock.calls).toMatchObject([
+      [terms, []],
     ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
       [key1Query, ctx(key1, ctx(id1))],
@@ -332,6 +337,9 @@ describe('query', () => {
     expect((resolvers.checkProperty1Existence as any).mock.calls.sort()).toMatchObject([
       ctx(id1),
       ctx(id2),
+    ]);
+    expect((resolvers.resolveProperty3Terms as any).mock.calls).toMatchObject([
+      [terms, []],
     ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
       [key1Query, ctx(key1, ctx(id1))],
