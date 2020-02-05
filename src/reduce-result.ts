@@ -6,7 +6,7 @@ import * as Either_ from 'fp-ts/lib/Either';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Option_ from 'fp-ts/lib/Option';
 import * as Record_ from 'fp-ts/lib/Record';
-import { Lazy } from 'fp-ts/lib/function';
+import { Lazy, flow } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
 import * as Dict_ from './dict';
@@ -99,9 +99,8 @@ export const ids = <I extends Id, E extends Err, SR extends Result>(
           nonEmptyArray.sequence(either),
           Either_.map(mergeOption),
           Either_.chain(Either_.fromOption(existenceChange)),
-          Either_.map((bar) =>
-            pipe(
-              bar,
+          Either_.map(
+            flow(
               nonEmptyArray.sequence(option),
               Option_.map((subResultVariants) => reduceSubResult(subResultVariants)),
               option.sequence(either),
@@ -127,12 +126,11 @@ export const search = <T extends Terms, I extends Id, E extends Err, SR extends 
       pipe(
         subResultVariants,
         nonEmptyArray.sequence(either),
-        Either_.chain((optionalResults) =>
-          pipe(
-            optionalResults,
-            Dict_.mergeSymmetric((foo) =>
-              pipe(
-                reduceSubResult(foo),
+        Either_.chain(
+          flow(
+            Dict_.mergeSymmetric(
+              flow(
+                reduceSubResult,
                 Option_.some,
               ),
             ),
