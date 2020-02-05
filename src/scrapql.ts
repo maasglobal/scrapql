@@ -8,10 +8,14 @@ import { pipe } from 'fp-ts/lib/pipeable';
 import * as Option_ from 'fp-ts/lib/Option';
 
 import { Zero, zero, Prepend, prepend, Onion } from './onion';
-import { Dict } from './dict';
+import { Dict as _Dict, dict as _dict } from './dict';
 
 export { process } from './process';
 export { reduce } from './reduce';
+
+export type Dict<K, V> = _Dict<K, V>;
+export const Dict = _Dict;
+export const dict = _dict;
 
 export type Json = unknown;
 
