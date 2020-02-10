@@ -1,6 +1,6 @@
 import * as t from 'io-ts';
 
-import { NonEmptyArray, nonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
+import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { Task, task } from 'fp-ts/lib/Task';
 import { Either, either } from 'fp-ts/lib/Either';
 import { Option, option } from 'fp-ts/lib/Option';
@@ -92,12 +92,26 @@ const reduceDuplicateKeys = <T>(duplicates: NonEmptyArray<T>): Option<T> =>
     ),
   );
 
+const transpose = <A>(outer: NonEmptyArray<Array<A>>): Array<NonEmptyArray<A>> =>
+  pipe(
+    NonEmptyArray_.head(outer),
+    Array_.mapWithIndex((i, first) =>
+      NonEmptyArray_.cons(
+        first,
+        pipe(
+          NonEmptyArray_.tail(outer),
+          Array_.filterMap((inner) => Option_.fromNullable(inner[i])),
+        ),
+      ),
+    ),
+  );
+
 export const mergeSymmetric = <A, B>(
   reduceValues: (vs: NonEmptyArray<A>) => Option<B>,
 ) => <K>(dicts: NonEmptyArray<Dict<K, A>>): Option<Dict<K, B>> =>
   pipe(
     dicts,
-    nonEmptyArray.sequence(array),
+    transpose,
     Array_.map(
       (variants: NonEmptyArray<[K, A]>): Option<[K, B]> =>
         pipe(
@@ -119,3 +133,8 @@ export const mergeSymmetric = <A, B>(
     ),
     array.sequence(option),
   );
+
+export const rewireDict = {
+  reduceDuplicateKeys,
+  transpose,
+};

@@ -202,6 +202,9 @@ export type ReduceFailure = ReduceeMismatch;
 export type ResultReducer<R extends Result> = (
   r: NonEmptyArray<R>,
 ) => Either<ReduceFailure, R>;
+
+export type Failure = ReduceFailure;
+
 export type LeafResultCombiner<R extends Result> = (w: R, r: R) => R;
 
 export type ResultReducerMapping<R extends PropertiesResult<any>> = {

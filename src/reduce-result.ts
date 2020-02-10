@@ -9,6 +9,7 @@ import * as Record_ from 'fp-ts/lib/Record';
 import { Lazy, flow } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
+import { Dict } from './dict';
 import * as Dict_ from './dict';
 import { mergeOption } from './option';
 
@@ -116,25 +117,33 @@ export const ids = <I extends Id, E extends Err, SR extends Result>(
 
 export const search = <T extends Terms, I extends Id, E extends Err, SR extends Result>(
   reduceSubResult: ResultReducer<SR>,
-  matchChange: Lazy<E>,
+  matchChange: (e: NonEmptyArray<Array<I>>) => E,
 ) => (
   results: NonEmptyArray<SearchResult<SR, T, I, E>>,
 ): Either<ReduceFailure, SearchResult<SR, T, I, E>> =>
   pipe(
     results,
-    Dict_.mergeSymmetric((subResultVariants) =>
+    Dict_.mergeSymmetric((subResultVariants: NonEmptyArray<Either<E, Dict<I, SR>>>) =>
       pipe(
         subResultVariants,
         nonEmptyArray.sequence(either),
-        Either_.chain(
-          flow(
+        Either_.chain((subResultDicts) =>
+          pipe(
+            subResultDicts,
             Dict_.mergeSymmetric(
               flow(
                 reduceSubResult,
                 Option_.some,
               ),
             ),
-            Either_.fromOption(matchChange),
+            Either_.fromOption(
+              (): E =>
+                pipe(
+                  subResultDicts,
+                  NonEmptyArray_.map(Dict_.keys),
+                  matchChange,
+                ),
+            ),
             Either_.map(Dict_.sequenceEither),
           ),
         ),
