@@ -193,7 +193,22 @@ const processQuery: QueryProcessor<Query, Result, Resolvers, Ctx0> = process.que
   }) as QueryProcessor<Query, Result, Resolvers, Ctx0>;
 ```
 
-Running the processor will produce the following result.
+You can run the processor as follows.
+
+```typescript
+import { processorInstance, ctx0 } from 'scrapql';
+
+async function generateExampleOutput() {
+  const qp = processorInstance(processQuery, resolvers, ctx0);
+  const q: Query = await tPromise.decode(Query, exampleJsonQuery);
+  const output = await qp(q)();
+  console.log(output);
+}
+
+generateExampleOutput();
+```
+
+The result object should look as follows.
 
 ```typescript
 const exampleResult = {
@@ -231,31 +246,12 @@ const exampleResult = {
     ['c007', {
       _tag: 'Right',  // identity check success
       right: {
-        get: {
-          _tag: 'None',  // customer does not exist
-        },
+        _tag: 'None',  // customer does not exist
       },
     }],
   ],
-};
+} as unknown as Result;
 ```
-
-You can run the processor as follows.
-
-```typescript
-import { processorInstance, ctx0 } from 'scrapql';
-
-async function generateExampleOutput() {
-  const qp = processorInstance(processQuery, resolvers, ctx0);
-  const q: Query = await tPromise.decode(Query, exampleJsonQuery);
-  const output = await qp(q)();
-  console.log(output);
-}
-
-generateExampleOutput();
-```
-
-The result object should look as follows.
 
 ## Define Result Validator
 
@@ -278,6 +274,12 @@ type Result = t.TypeOf<typeof Result>;
 ```
 
 We can now use the result validator to encode the result as JSON.
+
+```typescript
+const exampleJsonResult: Json = JSON.parse(JSON.stringify(Result.encode(exampleResult)));
+```
+
+It all comes together as the following query processor.
 
 ```typescript
 async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
@@ -361,11 +363,12 @@ Creating one is not necessary but may be useful.
 
 ```typescript
 import { Protocol } from 'scrapql';
+import { nonEmptyArray } from 'io-ts-types/lib/nonEmptyArray';
 
 type Bundle = Protocol<
-  (q: Query) => Query,
-  (r: Result) => Result,
-  (e: Errors) => Errors,
+  Query,
+  Result,
+  Errors,
   Resolvers,
   Reporters
 >;
@@ -374,12 +377,14 @@ const exampleBundle: Partial<Bundle> = {
   Query,
   Result,
   Err: Errors,
-  query: (q: Query) => q,
-  result: (r: Result) => r,
-  err: (e: Errors) => e,
+  query: (q) => q,
+  result: (r) => r,
+  err: (e) => e,
+  queryExamples: nonEmptyArray(Query).decode(exampleJsonQuery),
+  resultExamples: nonEmptyArray(Result).decode(exampleJsonResult),
   processQuery,
   processResult,
-}
+};
 ```
 
 ## Example Flow
@@ -453,14 +458,4 @@ async function client(query: Query): Promise<void> {
   );
   return main();
 }
-```
-
-
-The following exports are used by test code.
-
-```typescript
-export { Bundle, Customer, CustomerId, Errors, Json, QUERY_PROTOCOL, Query,
-RESULT_PROTOCOL, Report, Result, Year, client, db, example, exampleBundle, exampleJsonQuery,
-exampleQuery, exampleResult, jsonQueryProcessor, packageName, packageVersion,
-processQuery, processResult, reporters, resolvers, server }
 ```

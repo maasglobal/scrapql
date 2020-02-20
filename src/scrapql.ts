@@ -211,53 +211,74 @@ export type ResultReducerMapping<R extends PropertiesResult<any>> = {
   [I in keyof R]: ResultReducer<Required<R>[I]>;
 };
 
-export type Constructor<T, A extends Args> = (...args: A) => T;
+export type Constructor<T> = <I extends T>(i: I) => I;
 
-export type QueryConstructorArgs = Args;
-export type ResultConstructorArgs = Args;
-export type ErrConstructorArgs = Args;
+export type InvalidExamples = unknown;
 
-export type QueryConstructor<
-  Q extends Query = any, //Query,
-  A extends QueryConstructorArgs = QueryConstructorArgs
-> = Constructor<Q, A>;
-
-export type ResultConstructor<
-  R extends Result = any, //Result,
-  A extends ResultConstructorArgs = ResultConstructorArgs
-> = Constructor<R, A>;
-
-export type ErrConstructor<
-  E extends Err = Err,
-  A extends ErrConstructorArgs = ErrConstructorArgs
-> = Constructor<E, A>;
-
-export type QueryUtils<
-  QC extends QueryConstructor,
-  RC extends ResultConstructor,
-  QA extends Resolvers
-> = {
-  Query: t.Type<ReturnType<QC>, Json>;
-  query: QC;
-  processQuery: QueryProcessor<ReturnType<QC>, ReturnType<RC>, QA>;
+export type Codecs<Q extends Query, R extends Result, E extends Err> = {
+  Query: t.Type<Q, Json>;
+  Result: t.Type<R, Json>;
+  Err: t.Type<E, Json>;
 };
 
-export type ResultUtils<RC extends ResultConstructor, RA extends Reporters> = {
-  Result: t.Type<ReturnType<RC>, Json>;
-  result: RC;
-  processResult: ResultProcessor<ReturnType<RC>, RA>;
-  reduceResult: ResultReducer<ReturnType<RC>>;
+export type Constructors<Q extends Query, R extends Result, E extends Err> = {
+  query: Constructor<Q>;
+  result: Constructor<R>;
+  err: Constructor<E>;
+};
+export const constructors = <Q extends Query, R extends Result, E extends Err>(
+  _codecs: Codecs<Q, R, E>,
+): Constructors<Q, R, E> => ({
+  query: (q) => q,
+  result: (r) => r,
+  err: (e) => e,
+});
+
+export type Examples<Q extends Query, R extends Result> = {
+  queryExamples: Either<InvalidExamples, NonEmptyArray<Q>>;
+  resultExamples: Either<InvalidExamples, NonEmptyArray<R>>;
 };
 
-export type ErrUtils<EC extends ErrConstructor> = {
-  Err: t.Type<ReturnType<EC>, Json>;
-  err: EC;
+export type QueryUtils<Q extends Query, R extends Result, QA extends Resolvers> = {
+  processQuery: QueryProcessor<Q, R, QA>;
 };
 
-export type Protocol<
-  QC extends QueryConstructor,
-  RC extends ResultConstructor,
-  EC extends ErrConstructor,
+export type ResultUtils<R extends Result, RA extends Reporters> = {
+  processResult: ResultProcessor<R, RA>;
+  reduceResult: ResultReducer<R>;
+};
+
+export type Fundamentals<
+  Q extends Query,
+  R extends Result,
+  E extends Err,
   QA extends Resolvers,
   RA extends Reporters
-> = QueryUtils<QC, RC, QA> & ResultUtils<RC, RA> & ErrUtils<EC>;
+> = QueryUtils<Q, R, QA> & ResultUtils<R, RA> & Codecs<Q, R, E> & Examples<Q, R>;
+
+export type Conveniences<Q extends Query, R extends Result, E extends Err> = Constructors<
+  Q,
+  R,
+  E
+>;
+
+export type Protocol<
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  QA extends Resolvers,
+  RA extends Reporters
+> = Fundamentals<Q, R, E, QA, RA> & Conveniences<Q, R, E>;
+
+export const protocol = <
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  QA extends Resolvers,
+  RA extends Reporters
+>(
+  fundamentals: Fundamentals<Q, R, E, QA, RA>,
+): Protocol<Q, R, E, QA, RA> => ({
+  ...fundamentals,
+  ...constructors(fundamentals),
+});
