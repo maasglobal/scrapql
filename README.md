@@ -369,6 +369,7 @@ type Bundle = Protocol<
   Query,
   Result,
   Errors,
+  Ctx0,
   Resolvers,
   Reporters
 >;

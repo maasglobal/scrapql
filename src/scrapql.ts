@@ -140,13 +140,13 @@ export type QueryProcessor<
   Q extends Query,
   R extends Result,
   A extends Resolvers,
-  C extends Context = Zero
+  C extends Context
 > = Processor<Q, R, A, C>;
 
 export type ResultProcessor<
   R extends Result,
   A extends Reporters,
-  C extends Context = Zero
+  C extends Context
 > = Processor<R, void, A, C>;
 
 export type Handler<I, O, C extends Context> = (i: I, c: C) => Task<O>;
@@ -239,12 +239,17 @@ export type Examples<Q extends Query, R extends Result> = {
   resultExamples: Either<InvalidExamples, NonEmptyArray<R>>;
 };
 
-export type QueryUtils<Q extends Query, R extends Result, QA extends Resolvers> = {
-  processQuery: QueryProcessor<Q, R, QA>;
+export type QueryUtils<
+  Q extends Query,
+  R extends Result,
+  QA extends Resolvers,
+  C extends Context
+> = {
+  processQuery: QueryProcessor<Q, R, QA, C>;
 };
 
-export type ResultUtils<R extends Result, RA extends Reporters> = {
-  processResult: ResultProcessor<R, RA>;
+export type ResultUtils<R extends Result, RA extends Reporters, C extends Context> = {
+  processResult: ResultProcessor<R, RA, C>;
   reduceResult: ResultReducer<R>;
 };
 
@@ -252,9 +257,10 @@ export type Fundamentals<
   Q extends Query,
   R extends Result,
   E extends Err,
+  C extends Context,
   QA extends Resolvers,
   RA extends Reporters
-> = QueryUtils<Q, R, QA> & ResultUtils<R, RA> & Codecs<Q, R, E> & Examples<Q, R>;
+> = QueryUtils<Q, R, QA, C> & ResultUtils<R, RA, C> & Codecs<Q, R, E> & Examples<Q, R>;
 
 export type Conveniences<Q extends Query, R extends Result, E extends Err> = Constructors<
   Q,
@@ -266,19 +272,21 @@ export type Protocol<
   Q extends Query,
   R extends Result,
   E extends Err,
+  C extends Context,
   QA extends Resolvers,
   RA extends Reporters
-> = Fundamentals<Q, R, E, QA, RA> & Conveniences<Q, R, E>;
+> = Fundamentals<Q, R, E, C, QA, RA> & Conveniences<Q, R, E>;
 
 export const protocol = <
   Q extends Query,
   R extends Result,
   E extends Err,
+  C extends Context,
   QA extends Resolvers,
   RA extends Reporters
 >(
-  fundamentals: Fundamentals<Q, R, E, QA, RA>,
-): Protocol<Q, R, E, QA, RA> => ({
+  fundamentals: Fundamentals<Q, R, E, C, QA, RA>,
+): Protocol<Q, R, E, C, QA, RA> => ({
   ...fundamentals,
   ...constructors(fundamentals),
 });
