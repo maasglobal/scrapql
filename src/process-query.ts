@@ -95,10 +95,7 @@ export function keys<
         query,
         Dict_.mapWithIndex(
           (key: K, subQuery: SQ): Task<SR> => {
-            const subContext = pipe(
-              context,
-              Context_.prepend(key),
-            );
+            const subContext = pipe(context, Context_.prepend(key));
             return subProcessor(subQuery)(subContext)(resolvers);
           },
         ),
@@ -127,10 +124,7 @@ export function ids<
         query,
         Dict_.mapWithIndex(
           (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
-            const subContext = pipe(
-              context,
-              Context_.prepend(id),
-            );
+            const subContext = pipe(context, Context_.prepend(id));
             const existenceCheck = connect(resolvers);
             return pipe(
               existenceCheck(existenceQuery(id), context),
@@ -186,10 +180,7 @@ export function search<
                   pipe(
                     ids,
                     Array_.map((id: I): [I, Task<SR>] => {
-                      const subContext = pipe(
-                        context,
-                        Context_.prepend(id),
-                      );
+                      const subContext = pipe(context, Context_.prepend(id));
                       const subResult = subProcessor(subQuery)(subContext)(resolvers);
                       return [id, subResult];
                     }),

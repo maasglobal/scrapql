@@ -25,7 +25,7 @@
     "clean": "rm -rf lib",
     "build": "yarn clean && tsc",
     "typecheck": "tsc -p src/tsconfig.json",
-    "eslint": "eslint --max-warnings=0 '**/*.{ts,js,json}' --ignore-path .gitignore",
+    "eslint": "eslint --max-warnings=0 '**/*.{ts,js,json}'",
     "lint": "yarn eslint",
     "ci": "yarn readme-ts && yarn lint && yarn typecheck && yarn test && yarn build",
     "deploy-npm": "yarn ci && yarn publish --non-interactive"
@@ -36,14 +36,16 @@
   },
   "devDependencies": {
     "@types/jest": "^24.0.12",
-    "@typescript-eslint/eslint-plugin": "^2.1.0",
-    "@typescript-eslint/parser": "^2.1.0",
-    "eslint": "^6.3.0",
-    "eslint-config-prettier": "^6.2.0",
+    "@types/node": "^13.7.6",
+    "@typescript-eslint/eslint-plugin": "^2.21.0",
+    "@typescript-eslint/parser": "^2.21.0",
+    "eslint": "^6.8.0",
+    "eslint-config-maasglobal-ts": "^0.0.2",
+    "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-fp": "^2.3.0",
-    "eslint-plugin-import": "^2.18.2",
-    "eslint-plugin-json": "^1.4.0",
-    "eslint-plugin-prettier": "^3.1.0",
+    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-json": "^2.1.0",
+    "eslint-plugin-prettier": "^3.1.2",
     "fp-ts": "^2.3.1",
     "io-ts": "^2.0.2",
     "io-ts-promise": "^2.0.2",
@@ -51,9 +53,9 @@
     "jest": "^24.8.0",
     "monocle-ts": "^2.0.0",
     "newtype-ts": "^0.3.2",
-    "prettier": "^1.18.2",
+    "prettier": "^1.19.1",
     "ts-jest": "^24.0.2",
-    "typescript": "^3.7.3"
+    "typescript": "^3.8.2"
   },
   "license": "MIT"
 }

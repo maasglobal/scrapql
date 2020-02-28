@@ -7,20 +7,12 @@ import { pipe } from 'fp-ts/lib/pipeable';
 export const isAllNone = <T>(
   options: NonEmptyArray<Option<T>>,
 ): options is NonEmptyArray<None> =>
-  pipe(
-    options,
-    NonEmptyArray_.filter(Option_.isSome),
-    Option_.isNone,
-  );
+  pipe(options, NonEmptyArray_.filter(Option_.isSome), Option_.isNone);
 
 export const isAllSome = <T>(
   options: NonEmptyArray<Option<T>>,
 ): options is NonEmptyArray<None> =>
-  pipe(
-    options,
-    NonEmptyArray_.filter(Option_.isNone),
-    Option_.isNone,
-  );
+  pipe(options, NonEmptyArray_.filter(Option_.isNone), Option_.isNone);
 
 //: Either<E, NonEmptyArray<None> | NonEmptyArray<Some<SR>>>
 

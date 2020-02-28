@@ -58,11 +58,7 @@ export const leaf = <R extends LeafResult>(combineLeafResult: LeafResultCombiner
 ): Either<ReduceFailure, R> => {
   const writeResult: R = NonEmptyArray_.head(results);
   const readResult: Array<R> = NonEmptyArray_.tail(results);
-  return pipe(
-    readResult,
-    Array_.reduce(writeResult, combineLeafResult),
-    Either_.right,
-  );
+  return pipe(readResult, Array_.reduce(writeResult, combineLeafResult), Either_.right);
 };
 
 export const keys = <K extends Key, SR extends Result>(
@@ -74,10 +70,7 @@ export const keys = <K extends Key, SR extends Result>(
     results,
     Dict_.mergeSymmetric(
       (subResultVariants: NonEmptyArray<SR>): Option<Either<ReduceFailure, SR>> =>
-        pipe(
-          reduceSubResult(subResultVariants),
-          Option_.some,
-        ),
+        pipe(reduceSubResult(subResultVariants), Option_.some),
     ),
     Either_.fromOption(() => reduceeMismatch),
     Either_.chain(Dict_.sequenceEither),
@@ -130,19 +123,9 @@ export const search = <T extends Terms, I extends Id, E extends Err, SR extends 
         Either_.chain((subResultDicts) =>
           pipe(
             subResultDicts,
-            Dict_.mergeSymmetric(
-              flow(
-                reduceSubResult,
-                Option_.some,
-              ),
-            ),
+            Dict_.mergeSymmetric(flow(reduceSubResult, Option_.some)),
             Either_.fromOption(
-              (): E =>
-                pipe(
-                  subResultDicts,
-                  NonEmptyArray_.map(Dict_.keys),
-                  matchChange,
-                ),
+              (): E => pipe(subResultDicts, NonEmptyArray_.map(Dict_.keys), matchChange),
             ),
             Either_.map(Dict_.sequenceEither),
           ),
