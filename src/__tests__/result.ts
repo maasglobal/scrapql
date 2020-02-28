@@ -11,14 +11,14 @@ import * as scrapql from '../scrapql';
 
 import { Dict, dict } from '../dict';
 
-interface Logger<R, A extends Array<any>> {
+type Logger<R, A extends Array<any>> = {
   (...a: A): R;
   mock: any;
-}
-interface LoggerTask<R, A extends Array<any>> {
+};
+type LoggerTask<R, A extends Array<any>> = {
   (...a: A): Task<R>;
   mock: any;
-}
+};
 
 function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R, A> {
   const lt: LoggerTask<R, A> = (...largs) => () => {
@@ -71,7 +71,10 @@ describe('result', () => {
     min: number;
     max: number;
   };
-  const terms: Terms = { min: 0, max: 1 };
+  const terms: Terms = {
+    min: 0,
+    max: 1,
+  };
 
   type Key = string;
   const key1: Key = 'key1';
@@ -129,9 +132,11 @@ describe('result', () => {
   it('processProperty1', async () => {
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
-    const main = scrapql.processorInstance(processProperty1, reporters, context)(
-      property1Result,
-    );
+    const main = scrapql.processorInstance(
+      processProperty1,
+      reporters,
+      context,
+    )(property1Result);
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
@@ -153,9 +158,11 @@ describe('result', () => {
   it('processProperty2', async () => {
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
-    const main = scrapql.processorInstance(processProperty2, reporters, context)(
-      property2Result,
-    );
+    const main = scrapql.processorInstance(
+      processProperty2,
+      reporters,
+      context,
+    )(property2Result);
     await main();
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([]);
@@ -182,9 +189,11 @@ describe('result', () => {
   it('processProperty3', async () => {
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
-    const main = scrapql.processorInstance(processProperty3, reporters, context)(
-      property3Result,
-    );
+    const main = scrapql.processorInstance(
+      processProperty3,
+      reporters,
+      context,
+    )(property3Result);
     await main();
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty3Match as any).mock.calls.sort()).toMatchObject([

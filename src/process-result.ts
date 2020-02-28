@@ -79,10 +79,7 @@ export function keys<
       const tasks: Array<Task<void>> = pipe(
         result,
         Dict_.mapWithIndex((key: K, subResult: SR) => {
-          const subContext = pipe(
-            context,
-            Onion_.prepend(key),
-          );
+          const subContext = pipe(context, Onion_.prepend(key));
           return subProcessor(subResult)(subContext)(reporters);
         }),
         Array_.map(([_k, v]) => v),
@@ -110,10 +107,7 @@ export function ids<
       const tasks: Array<Task<void>> = pipe(
         result,
         Dict_.mapWithIndex((id: I, maybeSubResult: Either<E, Option<SR>>) => {
-          const subContext = pipe(
-            context,
-            Onion_.prepend(id),
-          );
+          const subContext = pipe(context, Onion_.prepend(id));
           return pipe(
             maybeSubResult,
             Either_.fold(
@@ -162,10 +156,7 @@ export function search<
         result,
         Dict_.mapWithIndex(
           (terms: T, maybeSubResult: Either<E, Dict<I, SR>>): Array<Task<void>> => {
-            const termsContext = pipe(
-              context,
-              Onion_.prepend(terms),
-            );
+            const termsContext = pipe(context, Onion_.prepend(terms));
             return pipe(
               maybeSubResult,
               Either_.fold(
@@ -181,17 +172,11 @@ export function search<
                   const reportResults: Array<Task<void>> = pipe(
                     subResults,
                     Array_.map(([id, subResult]: [I, SR]) => {
-                      const idContext = pipe(
-                        context,
-                        Onion_.prepend(id),
-                      );
+                      const idContext = pipe(context, Onion_.prepend(id));
                       return subProcessor(subResult)(idContext)(reporters);
                     }),
                   );
-                  return pipe(
-                    [[reportIds], reportResults],
-                    Array_.flatten,
-                  );
+                  return pipe([[reportIds], reportResults], Array_.flatten);
                 },
               ),
             );

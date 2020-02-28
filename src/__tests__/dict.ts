@@ -18,10 +18,7 @@ describe('Dict', () => {
 
   it('transpose helper', () => {
     expect(
-      pipe(
-        NonEmptyArray_.cons([1, 2, 3], [[4, 5, 6]]),
-        rewireDict.transpose,
-      ),
+      pipe(NonEmptyArray_.cons([1, 2, 3], [[4, 5, 6]]), rewireDict.transpose),
     ).toMatchObject([
       NonEmptyArray_.cons(1, [4]),
       NonEmptyArray_.cons(2, [5]),

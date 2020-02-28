@@ -68,7 +68,11 @@ export type KeysQuery<SQ extends Query = Json, K extends Key = Key> = Dict<K, SQ
 export type IdsQuery<SQ extends Query = Json, I extends Id = Id> = Dict<I, SQ>;
 export type SearchQuery<SQ extends Query = Json, T extends Terms = Terms> = Dict<T, SQ>;
 export type PropertiesQuery<
-  Q extends { [I in Property]: Query } = { [I in Property]: Json }
+  Q extends {
+    [I in Property]: Query;
+  } = {
+    [I in Property]: Json;
+  }
 > = Partial<Q>;
 export type Terms = Json;
 export type TermsQuery<Q extends Terms> = Q & {
@@ -106,7 +110,11 @@ export type SearchResult<
   E extends Err = Err
 > = Dict<T, Either<E, Dict<I, SR>>>;
 export type PropertiesResult<
-  R extends { [I in Property]: Result } = { [I in Property]: Json }
+  R extends {
+    [I in Property]: Result;
+  } = {
+    [I in Property]: Json;
+  }
 > = Partial<R>;
 
 export type ReportableResult = LeafResult | ExistenceResult;

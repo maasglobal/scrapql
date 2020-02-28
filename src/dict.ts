@@ -33,11 +33,7 @@ export function sequenceKVTask<K, V>([k, v]: [K, Task<V>]): Task<[K, V]> {
 }
 
 export function sequenceTask<K, V>(dict: Dict<K, Task<V>>): Task<Dict<K, V>> {
-  return pipe(
-    dict,
-    Array_.map(sequenceKVTask),
-    array.sequence(task),
-  );
+  return pipe(dict, Array_.map(sequenceKVTask), array.sequence(task));
 }
 
 export function sequenceKVEither<K, V, E>([k, v]: [K, Either<E, V>]): Either<E, [K, V]> {
@@ -47,11 +43,7 @@ export function sequenceKVEither<K, V, E>([k, v]: [K, Either<E, V>]): Either<E, 
 export function sequenceEither<K, V, E>(
   dict: Dict<K, Either<E, V>>,
 ): Either<E, Dict<K, V>> {
-  return pipe(
-    dict,
-    Array_.map(sequenceKVEither),
-    array.sequence(either),
-  );
+  return pipe(dict, Array_.map(sequenceKVEither), array.sequence(either));
 }
 
 export function lookup<K>(k: K) {
@@ -81,13 +73,18 @@ export function values<V>(dict: Dict<unknown, V>): Array<V> {
 const reduceDuplicateKeys = <T>(duplicates: NonEmptyArray<T>): Option<T> =>
   pipe(
     duplicates,
-    Array_.uniq({ equals: (a: T, b: T) => a === b }),
+    Array_.uniq({
+      equals: (a: T, b: T) => a === b,
+    }),
     NonEmptyArray_.fromArray,
     Option_.chain(
       ([k, ...ks]: NonEmptyArray<T>): Option<T> =>
         pipe(
           ks.length === 0,
-          boolean_.fold(() => Option_.none, () => Option_.some(k)),
+          boolean_.fold(
+            () => Option_.none,
+            () => Option_.some(k),
+          ),
         ),
     ),
   );
