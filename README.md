@@ -110,7 +110,7 @@ type Query = t.TypeOf<typeof Query>;
 You can use the query validator to validate JSON queries as follows.
 
 ```typescript
-import * as tPromise from 'io-ts-promise';
+import { validator } from 'io-ts-validator';
 
 const exampleJsonQuery: Json = {
   protocol: QUERY_PROTOCOL,
@@ -124,7 +124,7 @@ const exampleJsonQuery: Json = {
   ],
 };
 
-const exampleQuery: Promise<Query> = tPromise.decode(Query, exampleJsonQuery);
+const exampleQuery: Query = validator(Query).decodeSync(exampleJsonQuery);
 ```
 
 ## Define Query Resolvers
@@ -200,7 +200,7 @@ import { processorInstance, ctx0 } from 'scrapql';
 
 async function generateExampleOutput() {
   const qp = processorInstance(processQuery, resolvers, ctx0);
-  const q: Query = await tPromise.decode(Query, exampleJsonQuery);
+  const q: Query = await validator(Query).decodePromise(exampleJsonQuery);
   const output = await qp(q)();
   console.log(output);
 }
@@ -284,7 +284,7 @@ It all comes together as the following query processor.
 ```typescript
 async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
   const qp = processorInstance(processQuery, resolvers, ctx0);
-  const q: Query = await tPromise.decode(Query, jsonQuery);
+  const q: Query = await validator(Query).decodePromise(jsonQuery);
   const r: Result = await qp(q)();
   const jsonResult: Json = JSON.parse(JSON.stringify(Result.encode(r)));
   return jsonResult;
@@ -363,7 +363,6 @@ Creating one is not necessary but may be useful.
 
 ```typescript
 import { Protocol } from 'scrapql';
-import { nonEmptyArray } from 'io-ts-types/lib/nonEmptyArray';
 
 type Bundle = Protocol<
   Query,
@@ -381,8 +380,8 @@ const exampleBundle: Partial<Bundle> = {
   query: (q) => q,
   result: (r) => r,
   err: (e) => e,
-  queryExamples: nonEmptyArray(Query).decode(exampleJsonQuery),
-  resultExamples: nonEmptyArray(Result).decode(exampleJsonResult),
+  queryExamples: [exampleQuery],
+  resultExamples: [exampleResult],
   processQuery,
   processResult,
 };
