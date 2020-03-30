@@ -221,8 +221,6 @@ export type ResultReducerMapping<R extends PropertiesResult<any>> = {
 
 export type Constructor<T> = <I extends T>(i: I) => I;
 
-export type InvalidExamples = unknown;
-
 export type Codecs<Q extends Query, R extends Result, E extends Err> = {
   Query: t.Type<Q, Json>;
   Result: t.Type<R, Json>;
@@ -243,8 +241,8 @@ export const constructors = <Q extends Query, R extends Result, E extends Err>(
 });
 
 export type Examples<Q extends Query, R extends Result> = {
-  queryExamples: Either<InvalidExamples, NonEmptyArray<Q>>;
-  resultExamples: Either<InvalidExamples, NonEmptyArray<R>>;
+  queryExamples: NonEmptyArray<Q>;
+  resultExamples: NonEmptyArray<R>;
 };
 
 export type QueryUtils<
