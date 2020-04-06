@@ -9,6 +9,7 @@ import * as Option_ from 'fp-ts/lib/Option';
 
 import { Zero, zero, Prepend, prepend, Onion } from './onion';
 import { Dict as _Dict, dict as _dict } from './dict';
+import { NEGenF, neGenF } from './negf';
 
 export * as ids from './shapes/ids';
 export * as keys from './shapes/keys';
@@ -244,9 +245,19 @@ export const constructors = <Q extends Query, R extends Result, E extends Err>(
   err: (e) => e,
 });
 
-export type Examples<Q extends Query, R extends Result> = {
-  queryExamples: NonEmptyArray<Q>;
-  resultExamples: NonEmptyArray<R>;
+export type Examples<A> = NEGenF<A>;
+export const examples = neGenF;
+
+export type QueryExamplesMapping<Q extends PropertiesQuery<any>> = {
+  [I in keyof Q]: Examples<Required<Q>[I]>;
+};
+export type ResultExamplesMapping<R extends PropertiesResult<any>> = {
+  [I in keyof R]: Examples<Required<R>[I]>;
+};
+
+export type ExampleCatalog<Q extends Query, R extends Result> = {
+  queryExamples: Examples<Q>;
+  resultExamples: Examples<R>;
 };
 
 export type QueryUtils<
@@ -270,7 +281,10 @@ export type Fundamentals<
   C extends Context,
   QA extends Resolvers,
   RA extends Reporters
-> = QueryUtils<Q, R, QA, C> & ResultUtils<R, RA, C> & Codecs<Q, R, E> & Examples<Q, R>;
+> = QueryUtils<Q, R, QA, C> &
+  ResultUtils<R, RA, C> &
+  Codecs<Q, R, E> &
+  ExampleCatalog<Q, R>;
 
 export type Conveniences<Q extends Query, R extends Result, E extends Err> = Constructors<
   Q,

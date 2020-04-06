@@ -363,7 +363,7 @@ A scrapql protocol bundle contains all of the tools we created above.
 Creating one is not necessary but may be useful.
 
 ```typescript
-import { Protocol } from 'scrapql';
+import { Protocol, examples } from 'scrapql';
 
 type Bundle = Protocol<
   Query,
@@ -381,8 +381,8 @@ const exampleBundle: Partial<Bundle> = {
   query: (q) => q,
   result: (r) => r,
   err: (e) => e,
-  queryExamples: [exampleQuery],
-  resultExamples: [exampleResult],
+  queryExamples: examples([exampleQuery]),
+  resultExamples: examples([exampleResult]),
   processQuery,
   processResult,
 };

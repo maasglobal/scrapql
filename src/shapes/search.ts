@@ -16,6 +16,7 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import * as Context_ from '../onion';
 import * as Dict_ from '../dict';
+import * as NEGenF_ from '../negf';
 import * as Onion_ from '../onion';
 import { Dict } from '../dict';
 import { Prepend } from '../onion';
@@ -23,6 +24,7 @@ import { Prepend } from '../onion';
 import {
   Context,
   Err,
+  Examples,
   Id,
   Query,
   QueryProcessor,
@@ -178,3 +180,32 @@ export const reduceResult = <
     Either_.fromOption(() => reduceeMismatch),
     Either_.chain(Dict_.sequenceEither),
   );
+
+export function queryExamples<T extends Terms, SQ extends Result>(
+  searches: Examples<T>,
+  subQueries: Examples<SQ>,
+): Examples<SearchQuery<SQ, T>> {
+  return pipe(
+    NEGenF_.sequenceT(searches, subQueries),
+    NEGenF_.map(([search, subQuery]) => Dict_.dict([search, subQuery])),
+  );
+}
+
+export function resultExamples<
+  T extends Terms,
+  I extends Id,
+  E extends Err,
+  SR extends Result
+>(
+  termss: Examples<T>,
+  ids: Examples<I>,
+  subResults: Examples<SR>,
+): Examples<SearchResult<SR, T, I, E>> {
+  return pipe(
+    NEGenF_.sequenceT(termss, ids, subResults),
+    NEGenF_.map(
+      ([terms, id, subResult]): SearchResult<SR, T, I, E> =>
+        Dict_.dict([terms, Either_.right(Dict_.dict([id, subResult]))]),
+    ),
+  );
+}
