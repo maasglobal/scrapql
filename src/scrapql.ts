@@ -10,8 +10,12 @@ import * as Option_ from 'fp-ts/lib/Option';
 import { Zero, zero, Prepend, prepend, Onion } from './onion';
 import { Dict as _Dict, dict as _dict } from './dict';
 
-export { process } from './process';
-export { reduce } from './reduce';
+export * as ids from './shape/ids';
+export * as keys from './shape/keys';
+export * as leaf from './shape/leaf';
+export * as literal from './shape/literal';
+export * as search from './shape/search';
+export * as properties from './shape/properties';
 
 export type Dict<K, V> = _Dict<K, V>;
 export const Dict = _Dict;

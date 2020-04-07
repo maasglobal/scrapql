@@ -172,22 +172,23 @@ const resolvers: Resolvers = {
 ## Define Query Processor
 
 ```typescript
-import { QueryProcessor, process, Ctx0 } from 'scrapql';
+import * as scrapql from 'scrapql';
+import { QueryProcessor, Ctx0 } from 'scrapql';
 
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
-const processQuery: QueryProcessor<Query, Result, Resolvers, Ctx0> = process.query.properties<Resolvers, Query, Result, Ctx0>({
-  protocol: process.query.literal(RESULT_PROTOCOL),
-    reports: process.query.keys(
-      process.query.properties({
-        get: process.query.leaf((r: Resolvers) => r.fetchReport)
+const processQuery: QueryProcessor<Query, Result, Resolvers, Ctx0> = scrapql.properties.processQuery<Resolvers, Query, Result, Ctx0>({
+  protocol: scrapql.literal.processQuery(RESULT_PROTOCOL),
+    reports: scrapql.keys.processQuery(
+      scrapql.properties.processQuery({
+        get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchReport)
       }) as QueryProcessor<{ get: true }, { get: Either<Errors, Report> }, Resolvers, Ctx<Year>> ,
     ),
-    customers: process.query.ids(
+    customers: scrapql.ids.processQuery(
       (r: Resolvers) => r.checkCustomerExistence,
-      process.query.properties({
-        get: process.query.leaf((r: Resolvers) => r.fetchCustomer),
+      scrapql.properties.processQuery({
+        get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchCustomer),
       }) as QueryProcessor<{ get: true }, { get: Either<Errors, Customer> }, Resolvers, Ctx<CustomerId>>,
     ) as QueryProcessor<Dict<CustomerId, { get: true; }>, Dict<CustomerId, Either<Errors, { get: Either<Errors, Option<Customer>>; }>>, Resolvers, Ctx0>,
   }) as QueryProcessor<Query, Result, Resolvers, Ctx0>;
@@ -340,17 +341,17 @@ const reporters: Reporters = {
 import { ResultProcessor } from 'scrapql';
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
-const processResult: ResultProcessor<Result, Reporters, Ctx0> = process.result.properties({
-    protocol: process.result.literal(),
-    reports: process.result.keys(
-      process.result.properties({
-        get: process.result.leaf((r: Reporters) => r.receiveReport)
+const processResult: ResultProcessor<Result, Reporters, Ctx0> = scrapql.properties.processResult({
+    protocol: scrapql.literal.processResult(),
+    reports: scrapql.keys.processResult(
+      scrapql.properties.processResult({
+        get: scrapql.leaf.processResult((r: Reporters) => r.receiveReport)
       }) as ResultProcessor<{ get: Either<Errors, Report> }, Reporters, Ctx<string>>,
     ),
-    customers: process.result.ids(
+    customers: scrapql.ids.processResult(
       (r: Reporters) => r.learnCustomerExistence,
-      process.result.properties({
-        get: process.result.leaf((r: Reporters) => r.receiveCustomer)
+      scrapql.properties.processResult({
+        get: scrapql.leaf.processResult((r: Reporters) => r.receiveCustomer)
       }),
     ),
   }) as ResultProcessor<Result, Reporters, Ctx0>;
