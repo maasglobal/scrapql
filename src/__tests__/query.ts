@@ -118,7 +118,7 @@ describe('query', () => {
     KeyQuery,
     KeyResult,
     Ctx<Key, Ctx<Id>>
-  > = scrapql.process.query.leaf((r) => r.fetchKeyResult);
+  > = scrapql.leaf.processQuery((r) => r.fetchKeyResult);
 
   it('processKey', async () => {
     const resolvers = createResolvers();
@@ -137,11 +137,9 @@ describe('query', () => {
   type KeysQuery = Dict<Key, KeyQuery>;
   const keysResult: KeysResult = dict([key1, key1Result]);
   const keysQuery: KeysQuery = dict([key1, key1Query]);
-  const processKeys: CustomQP<
-    KeysQuery,
-    KeysResult,
-    Ctx<Id>
-  > = scrapql.process.query.keys(processKey);
+  const processKeys: CustomQP<KeysQuery, KeysResult, Ctx<Id>> = scrapql.keys.processQuery(
+    processKey,
+  );
 
   it('processKeys', async () => {
     const resolvers = createResolvers();
@@ -170,7 +168,7 @@ describe('query', () => {
     Property1Query,
     Property1Result,
     Ctx0
-  > = scrapql.process.query.ids((r) => r.checkProperty1Existence, processKeys);
+  > = scrapql.ids.processQuery((r) => r.checkProperty1Existence, processKeys);
 
   it('processProperty1', async () => {
     const resolvers = createResolvers();
@@ -201,7 +199,7 @@ describe('query', () => {
     Property2Query,
     Property2Result,
     Ctx0
-  > = scrapql.process.query.leaf((r) => r.fetchProperty2Result);
+  > = scrapql.leaf.processQuery((r) => r.fetchProperty2Result);
 
   it('processProperty2', async () => {
     const resolvers = createResolvers();
@@ -231,7 +229,7 @@ describe('query', () => {
     Property3Query,
     Property3Result,
     Ctx0
-  > = scrapql.process.query.search((r) => r.resolveProperty3Terms, processKeys);
+  > = scrapql.search.processQuery((r) => r.resolveProperty3Terms, processKeys);
 
   it('processProperty3', async () => {
     const resolvers = createResolvers();
@@ -280,8 +278,8 @@ describe('query', () => {
       RootQuery,
       RootResult,
       Ctx0
-    > = scrapql.process.query.properties({
-      protocol: scrapql.process.query.literal(RESULT),
+    > = scrapql.properties.processQuery({
+      protocol: scrapql.literal.processQuery(RESULT),
       property1: processProperty1,
       property2: processProperty2,
       property3: processProperty3,
@@ -309,35 +307,35 @@ describe('query', () => {
   });
 
   it('processRoot (standalone)', async () => {
-    const processRoot = scrapql.process.query.properties<
+    const processRoot = scrapql.properties.processQuery<
       Resolvers,
       RootQuery,
       RootResult,
       Ctx0
     >({
-      protocol: scrapql.process.query.literal(RESULT),
-      property1: scrapql.process.query.ids(
+      protocol: scrapql.literal.processQuery(RESULT),
+      property1: scrapql.ids.processQuery(
         (r: Resolvers) => r.checkProperty1Existence,
-        scrapql.process.query.keys<
+        scrapql.keys.processQuery<
           Resolvers,
           KeysQuery,
           Key,
           KeyQuery,
           KeyResult,
           Ctx<Id>
-        >(scrapql.process.query.leaf((r: Resolvers) => r.fetchKeyResult)),
+        >(scrapql.leaf.processQuery((r: Resolvers) => r.fetchKeyResult)),
       ),
-      property2: scrapql.process.query.leaf((r: Resolvers) => r.fetchProperty2Result),
-      property3: scrapql.process.query.search(
+      property2: scrapql.leaf.processQuery((r: Resolvers) => r.fetchProperty2Result),
+      property3: scrapql.search.processQuery(
         (r) => r.resolveProperty3Terms,
-        scrapql.process.query.keys<
+        scrapql.keys.processQuery<
           Resolvers,
           KeysQuery,
           Key,
           KeyQuery,
           KeyResult,
           Ctx<Id>
-        >(scrapql.process.query.leaf((r: Resolvers) => r.fetchKeyResult)),
+        >(scrapql.leaf.processQuery((r: Resolvers) => r.fetchKeyResult)),
       ),
     });
 

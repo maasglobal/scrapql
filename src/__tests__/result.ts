@@ -81,7 +81,7 @@ describe('result', () => {
 
   type KeyResult = string;
   const key1Result: KeyResult = 'result1';
-  const processKey: CustomRP<KeyResult, Ctx<Key, Ctx<Id>>> = scrapql.process.result.leaf(
+  const processKey: CustomRP<KeyResult, Ctx<Key, Ctx<Id>>> = scrapql.leaf.processResult(
     (r) => r.receiveKeyResult,
   );
 
@@ -99,7 +99,7 @@ describe('result', () => {
 
   type KeysResult = Dict<Key, KeyResult>;
   const keysResult: KeysResult = dict([key1, key1Result]);
-  const processKeys: CustomRP<KeysResult, Ctx<Id>> = scrapql.process.result.keys(
+  const processKeys: CustomRP<KeysResult, Ctx<Id>> = scrapql.keys.processResult(
     processKey,
   );
 
@@ -120,7 +120,7 @@ describe('result', () => {
     [id1, Either_.right(Option_.some(keysResult))],
     [id2, Either_.right(Option_.none)],
   );
-  const processProperty1: CustomRP<Property1Result, Ctx0> = scrapql.process.result.ids<
+  const processProperty1: CustomRP<Property1Result, Ctx0> = scrapql.ids.processResult<
     Reporters,
     Property1Result,
     Id,
@@ -151,7 +151,7 @@ describe('result', () => {
 
   type Property2Result = string;
   const property2Result: Property2Result = 'result2';
-  const processProperty2: CustomRP<Property2Result, Ctx0> = scrapql.process.result.leaf(
+  const processProperty2: CustomRP<Property2Result, Ctx0> = scrapql.leaf.processResult(
     (r) => r.receiveProperty2Result,
   );
 
@@ -176,7 +176,7 @@ describe('result', () => {
     terms,
     Either_.right(dict([id1, keysResult])),
   ]);
-  const processProperty3: CustomRP<Property3Result, Ctx0> = scrapql.process.result.search<
+  const processProperty3: CustomRP<Property3Result, Ctx0> = scrapql.search.processResult<
     Reporters,
     Property3Result,
     Terms,
@@ -218,12 +218,12 @@ describe('result', () => {
   };
 
   it('processRoot (composed)', async () => {
-    const processRoot: CustomRP<RootResult, Ctx0> = scrapql.process.result.properties<
+    const processRoot: CustomRP<RootResult, Ctx0> = scrapql.properties.processResult<
       Reporters,
       RootResult,
       Ctx0
     >({
-      protocol: scrapql.process.result.literal(),
+      protocol: scrapql.literal.processResult(),
       property1: processProperty1,
       property2: processProperty2,
       property3: processProperty3,
@@ -249,9 +249,9 @@ describe('result', () => {
   });
 
   it('processRoot (standalone)', async () => {
-    const processRoot = scrapql.process.result.properties<Reporters, RootResult, Ctx0>({
-      protocol: scrapql.process.result.literal(),
-      property1: scrapql.process.result.ids<
+    const processRoot = scrapql.properties.processResult<Reporters, RootResult, Ctx0>({
+      protocol: scrapql.literal.processResult(),
+      property1: scrapql.ids.processResult<
         Reporters,
         Property1Result,
         Id,
@@ -260,14 +260,14 @@ describe('result', () => {
         Err1
       >(
         (r: Reporters) => r.learnProperty1Existence,
-        scrapql.process.result.keys<Reporters, KeysResult, Key, KeyResult, Ctx<Id>>(
-          scrapql.process.result.leaf<Reporters, KeyResult, Ctx<Key, Ctx<Id>>>(
+        scrapql.keys.processResult<Reporters, KeysResult, Key, KeyResult, Ctx<Id>>(
+          scrapql.leaf.processResult<Reporters, KeyResult, Ctx<Key, Ctx<Id>>>(
             (r: Reporters) => r.receiveKeyResult,
           ),
         ),
       ),
-      property2: scrapql.process.result.leaf((r: Reporters) => r.receiveProperty2Result),
-      property3: scrapql.process.result.search<
+      property2: scrapql.leaf.processResult((r: Reporters) => r.receiveProperty2Result),
+      property3: scrapql.search.processResult<
         Reporters,
         Property3Result,
         Terms,
@@ -277,8 +277,8 @@ describe('result', () => {
         Err1
       >(
         (r) => r.learnProperty3Match,
-        scrapql.process.result.keys<Reporters, KeysResult, Key, KeyResult, Ctx<Id>>(
-          scrapql.process.result.leaf<Reporters, KeyResult, Ctx<Key, Ctx<Id>>>(
+        scrapql.keys.processResult<Reporters, KeysResult, Key, KeyResult, Ctx<Id>>(
+          scrapql.leaf.processResult<Reporters, KeyResult, Ctx<Key, Ctx<Id>>>(
             (r: Reporters) => r.receiveKeyResult,
           ),
         ),
