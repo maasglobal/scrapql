@@ -32,6 +32,12 @@ export function toNEArray<A>(gen: NEGenF<A>): NonEmptyArray<A> {
   return NonEmptyArray_.snoc(init, last);
 }
 
+export function head<A>(gen: NEGenF<A>): A {
+  const handle = gen();
+  const { value } = handle.next();
+  return value;
+}
+
 export function fromGF<A>(gf: () => Generator<A, void, undefined>): NEGenF<A> {
   return function* (): Generator<A, A, undefined> {
     const handle = gf();

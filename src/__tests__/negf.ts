@@ -61,6 +61,14 @@ describe('NEGenF', () => {
     expect(handle.next()).toStrictEqual({ value: 3, done: true });
   });
 
+  it('head', () => {
+    const fooBar: NEGenF<'foo' | 'bar'> = NEGenF_.fromGF(function* () {
+      yield 'foo';
+      yield 'bar';
+    });
+    expect(NEGenF_.head(fooBar)).toStrictEqual('foo');
+  });
+
   it('sequenceT1', () => {
     type AB = 'a' | 'b';
     const ab: NEGenF<AB> = NEGenF_.neGenF(['a', 'b']);
