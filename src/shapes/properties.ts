@@ -10,16 +10,21 @@ import { array } from 'fp-ts/lib/Array';
 import { identity } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
+import * as NEGenF_ from '../negf';
+
 import {
   Context,
+  Examples,
   PropertiesQuery,
   PropertiesResult,
   Property,
+  QueryExamplesMapping,
   QueryProcessor,
   QueryProcessorMapping,
   ReduceFailure,
   Reporters,
   Resolvers,
+  ResultExamplesMapping,
   ResultProcessor,
   ResultProcessorMapping,
   ResultReducer,
@@ -103,3 +108,15 @@ export const reduceResult = <R extends PropertiesResult>(
   const result: Either<ReduceFailure, Record<P, R[P]>> = Record_.sequence(either)(omg);
   return result as Either<ReduceFailure, R>;
 };
+
+export function queryExamples<Q extends PropertiesQuery>(
+  subQueries: QueryExamplesMapping<Q>,
+): Examples<Q> {
+  return NEGenF_.sequenceS(subQueries) as Examples<Q>;
+}
+
+export function resultExamples<R extends PropertiesResult>(
+  subResults: ResultExamplesMapping<R>,
+): Examples<R> {
+  return NEGenF_.sequenceS(subResults) as Examples<R>;
+}

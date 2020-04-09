@@ -8,6 +8,7 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import {
   Context,
+  Examples,
   LeafQuery,
   LeafResult,
   LeafResultCombiner,
@@ -18,6 +19,7 @@ import {
   ResolverConnector,
   Resolvers,
   ResultProcessor,
+  examples,
 } from '../scrapql';
 
 // leaf query contains information for retrieving a payload
@@ -58,3 +60,15 @@ export const reduceResult = <R extends LeafResult>(
   const readResult: Array<R> = NonEmptyArray_.tail(results);
   return pipe(readResult, Array_.reduce(writeResult, combineLeafResult), Either_.right);
 };
+
+export function queryExamples<Q extends LeafQuery>(
+  queries: NonEmptyArray<Q>,
+): Examples<Q> {
+  return examples(queries);
+}
+
+export function resultExamples<R extends LeafResult>(
+  results: NonEmptyArray<R>,
+): Examples<R> {
+  return examples(results);
+}

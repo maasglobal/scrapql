@@ -18,6 +18,7 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import * as Context_ from '../onion';
 import * as Dict_ from '../dict';
+import * as NEGenF_ from '../negf';
 import * as Onion_ from '../onion';
 import { Dict } from '../dict';
 import { Prepend } from '../onion';
@@ -26,6 +27,7 @@ import { mergeOption } from '../option';
 import {
   Context,
   Err,
+  Examples,
   Existence,
   ExistenceQuery,
   ExistenceResult,
@@ -171,3 +173,26 @@ export const reduceResult = <I extends Id, E extends Err, SR extends Result>(
     Either_.fromOption(() => reduceeMismatch),
     Either_.chain(Dict_.sequenceEither),
   );
+
+export function queryExamples<I extends Id, SQ extends Query>(
+  ids: Examples<I>,
+  subQueries: Examples<SQ>,
+): Examples<IdsQuery<SQ, I>> {
+  return pipe(
+    NEGenF_.sequenceT(ids, subQueries),
+    NEGenF_.map(([id, subQuery]) => Dict_.dict([id, subQuery])),
+  );
+}
+
+export function resultExamples<I extends Id, SR extends Result, E extends Err>(
+  ids: Examples<I>,
+  subResults: Examples<SR>,
+): Examples<IdsResult<SR, I, E>> {
+  return pipe(
+    NEGenF_.sequenceT(ids, subResults),
+    NEGenF_.map(
+      ([id, subResult]): IdsResult<SR, I, E> =>
+        Dict_.dict([id, Either_.right(Option_.some(subResult))]),
+    ),
+  );
+}

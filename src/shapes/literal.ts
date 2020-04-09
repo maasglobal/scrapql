@@ -9,6 +9,7 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import {
   Context,
+  Examples,
   LiteralQuery,
   LiteralResult,
   QueryProcessor,
@@ -16,6 +17,7 @@ import {
   Reporters,
   Resolvers,
   ResultProcessor,
+  examples,
   reduceeMismatch,
 } from '../scrapql';
 
@@ -63,3 +65,15 @@ export const reduceResult = <L extends LiteralResult>(
         ),
     ),
   );
+
+export function queryExamples<Q extends LiteralQuery>(
+  queries: NonEmptyArray<Q>,
+): Examples<Q> {
+  return examples(queries);
+}
+
+export function resultExamples<R extends LiteralResult>(
+  results: NonEmptyArray<R>,
+): Examples<R> {
+  return examples(results);
+}
