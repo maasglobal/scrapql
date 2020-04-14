@@ -9,15 +9,19 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import {
   Context,
+  Err,
   Examples,
+  LiteralProtocolSeed,
   LiteralQuery,
   LiteralResult,
+  Protocol,
   QueryProcessor,
   ReduceFailure,
   Reporters,
   Resolvers,
   ResultProcessor,
   examples,
+  protocol,
   reduceeMismatch,
 } from '../scrapql';
 
@@ -77,3 +81,24 @@ export function resultExamples<R extends LiteralResult>(
 ): Examples<R> {
   return examples(results);
 }
+
+export const bundle = <
+  Q extends LiteralQuery,
+  R extends LiteralResult,
+  E extends Err,
+  C extends Context,
+  QA extends Resolvers,
+  RA extends Reporters
+>(
+  seed: LiteralProtocolSeed<Q, R, E>,
+): Protocol<Q, R, E, C, QA, RA> =>
+  protocol({
+    Query: seed.Query,
+    Result: seed.Result,
+    Err: seed.Err,
+    processQuery: processQuery(seed.result),
+    processResult: processResult(),
+    reduceResult,
+    queryExamples: queryExamples(seed.queryExamplesArray),
+    resultExamples: resultExamples(seed.resultExamplesArray),
+  });

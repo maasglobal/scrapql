@@ -226,10 +226,19 @@ export type ResultReducerMapping<R extends PropertiesResult<any>> = {
 
 export type Constructor<T> = <I extends T>(i: I) => I;
 
+export type Codec<T> = t.Type<T, Json>;
+
+export type QueryCodec<Q extends Query> = Codec<Q>;
+export type ResultCodec<R extends Result> = Codec<R>;
+export type ErrCodec<E extends Err> = Codec<E>;
+export type KeyCodec<K extends Key> = Codec<K>;
+export type IdCodec<I extends Id> = Codec<I>;
+export type TermsCodec<T extends Terms> = Codec<T>;
+
 export type Codecs<Q extends Query, R extends Result, E extends Err> = {
-  Query: t.Type<Q, Json>;
-  Result: t.Type<R, Json>;
-  Err: t.Type<E, Json>;
+  Query: QueryCodec<Q>;
+  Result: ResultCodec<R>;
+  Err: ErrCodec<E>;
 };
 
 export type Constructors<Q extends Query, R extends Result, E extends Err> = {
@@ -314,3 +323,34 @@ export const protocol = <
   ...fundamentals,
   ...constructors(fundamentals),
 });
+
+export type LiteralProtocolSeed<
+  Q extends LiteralQuery,
+  R extends LiteralResult,
+  E extends Err
+> = {
+  Err: ErrCodec<E>;
+  Query: QueryCodec<Q>;
+  Result: ResultCodec<R>;
+  result: R;
+  queryExamplesArray: NonEmptyArray<Q>;
+  resultExamplesArray: NonEmptyArray<R>;
+};
+
+export type LeafProtocolSeed<
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  C extends Context,
+  QA extends Resolvers,
+  RA extends Reporters
+> = {
+  Err: ErrCodec<E>;
+  Query: QueryCodec<Q>;
+  Result: ResultCodec<R>;
+  queryConnector: ResolverConnector<QA, Q, R, C>;
+  resultConnector: ReporterConnector<RA, R, C>;
+  resultCombiner: LeafResultCombiner<R>;
+  queryExamplesArray: NonEmptyArray<Q>;
+  resultExamplesArray: NonEmptyArray<R>;
+};

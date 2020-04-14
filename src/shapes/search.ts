@@ -5,6 +5,7 @@ import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import * as Option_ from 'fp-ts/lib/Option';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { Either, either } from 'fp-ts/lib/Either';
+import { either as tEither } from 'io-ts-types/lib/either';
 import { flow } from 'fp-ts/lib/function';
 import { NonEmptyArray, nonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
@@ -26,6 +27,8 @@ import {
   Err,
   Examples,
   Id,
+  IdCodec,
+  Protocol,
   Query,
   QueryProcessor,
   ReduceFailure,
@@ -39,9 +42,12 @@ import {
   SearchQuery,
   SearchResult,
   Terms,
+  TermsCodec,
   TermsQuery,
   TermsResult,
   reduceeMismatch,
+  examples,
+  protocol,
   termsQuery,
 } from '../scrapql';
 
@@ -209,3 +215,35 @@ export function resultExamples<
     ),
   );
 }
+
+export const bundle = <
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  C extends Context,
+  QA extends Resolvers,
+  RA extends Reporters,
+  T extends Terms,
+  I extends Id
+>(
+  terms: { Terms: TermsCodec<T>; termsExamples: NonEmptyArray<T> },
+  id: { Id: IdCodec<I>; idExamples: NonEmptyArray<I> },
+  item: Protocol<Q, R, E, Prepend<I, C>, QA, RA>,
+  queryConnector: ResolverConnector<QA, TermsQuery<T>, TermsResult<I, E>, C>,
+  resultConnector: ReporterConnector<RA, TermsResult<I, E>, Prepend<T, C>>,
+  matchChange: (e: NonEmptyArray<Array<I>>) => E,
+): Protocol<SearchQuery<Q, T>, SearchResult<R, T, I, E>, E, C, QA, RA> =>
+  protocol({
+    Query: Dict(terms.Terms, item.Query),
+    Result: Dict(terms.Terms, tEither(item.Err, Dict(id.Id, item.Result))),
+    Err: item.Err,
+    processQuery: processQuery(queryConnector, item.processQuery),
+    processResult: processResult(resultConnector, item.processResult),
+    reduceResult: reduceResult(item.reduceResult, matchChange),
+    queryExamples: queryExamples(examples(terms.termsExamples), item.queryExamples),
+    resultExamples: resultExamples(
+      examples(terms.termsExamples),
+      examples(id.idExamples),
+      item.resultExamples,
+    ),
+  });
