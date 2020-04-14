@@ -6,9 +6,11 @@ import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import * as Task_ from 'fp-ts/lib/Task';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import { Either, either } from 'fp-ts/lib/Either';
+import { either as tEither } from 'io-ts-types/lib/either';
 import { Lazy, flow } from 'fp-ts/lib/function';
 import { NonEmptyArray, nonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { Option, option } from 'fp-ts/lib/Option';
+import { option as tOption } from 'io-ts-types/lib/option';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
@@ -32,8 +34,10 @@ import {
   ExistenceQuery,
   ExistenceResult,
   Id,
+  IdCodec,
   IdsQuery,
   IdsResult,
+  Protocol,
   Query,
   QueryProcessor,
   ReduceFailure,
@@ -44,7 +48,9 @@ import {
   Result,
   ResultProcessor,
   ResultReducer,
+  examples,
   existenceQuery,
+  protocol,
   reduceeMismatch,
 } from '../scrapql';
 
@@ -196,3 +202,29 @@ export function resultExamples<I extends Id, SR extends Result, E extends Err>(
     ),
   );
 }
+
+export const bundle = <
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  C extends Context,
+  QA extends Resolvers,
+  RA extends Reporters,
+  I extends Id
+>(
+  id: { Id: IdCodec<I>; idExamples: NonEmptyArray<I> },
+  item: Protocol<Q, R, E, Prepend<I, C>, QA, RA>,
+  queryConnector: ResolverConnector<QA, ExistenceQuery<I>, ExistenceResult<E>, C>,
+  resultConnector: ReporterConnector<RA, ExistenceResult<E>, Prepend<I, C>>,
+  existenceChange: Lazy<E>,
+): Protocol<IdsQuery<Q, I>, IdsResult<R, I, E>, E, C, QA, RA> =>
+  protocol({
+    Query: Dict(id.Id, item.Query),
+    Result: Dict(id.Id, tEither(item.Err, tOption(item.Result))),
+    Err: item.Err,
+    processQuery: processQuery(queryConnector, item.processQuery),
+    processResult: processResult(resultConnector, item.processResult),
+    reduceResult: reduceResult(item.reduceResult, existenceChange),
+    queryExamples: queryExamples(examples(id.idExamples), item.queryExamples),
+    resultExamples: resultExamples(examples(id.idExamples), item.resultExamples),
+  });

@@ -15,14 +15,18 @@ import * as Context_ from '../onion';
 import * as Dict_ from '../dict';
 import * as NEGenF_ from '../negf';
 import * as Onion_ from '../onion';
+import { Dict } from '../dict';
 import { Prepend } from '../onion';
 
 import {
   Context,
+  Err,
   Examples,
   Key,
+  KeyCodec,
   KeysQuery,
   KeysResult,
+  Protocol,
   Query,
   QueryProcessor,
   ReduceFailure,
@@ -31,6 +35,8 @@ import {
   Result,
   ResultProcessor,
   ResultReducer,
+  examples,
+  protocol,
   reduceeMismatch,
 } from '../scrapql';
 
@@ -119,3 +125,26 @@ export function resultExamples<K extends Key, SR extends Result>(
     NEGenF_.map(([key, subResult]): KeysResult<SR, K> => Dict_.dict([key, subResult])),
   );
 }
+
+export const bundle = <
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  C extends Context,
+  QA extends Resolvers,
+  RA extends Reporters,
+  K extends Key
+>(
+  key: { Key: KeyCodec<K>; keyExamples: NonEmptyArray<K> },
+  item: Protocol<Q, R, E, Prepend<K, C>, QA, RA>,
+): Protocol<KeysQuery<Q, K>, KeysResult<R, K>, E, C, QA, RA> =>
+  protocol({
+    Query: Dict(key.Key, item.Query),
+    Result: Dict(key.Key, item.Result),
+    Err: item.Err,
+    processQuery: processQuery(item.processQuery),
+    processResult: processResult(item.processResult),
+    reduceResult: reduceResult(item.reduceResult),
+    queryExamples: queryExamples(examples(key.keyExamples), item.queryExamples),
+    resultExamples: resultExamples(examples(key.keyExamples), item.resultExamples),
+  });

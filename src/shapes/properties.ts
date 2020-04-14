@@ -1,7 +1,9 @@
+import * as t from 'io-ts';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import * as Record_ from 'fp-ts/lib/Record';
+import * as Option_ from 'fp-ts/lib/Option';
 import { Either, either } from 'fp-ts/lib/Either';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
@@ -14,10 +16,13 @@ import * as NEGenF_ from '../negf';
 
 import {
   Context,
+  Err,
+  ErrCodec,
   Examples,
   PropertiesQuery,
   PropertiesResult,
   Property,
+  Protocol,
   QueryExamplesMapping,
   QueryProcessor,
   QueryProcessorMapping,
@@ -29,6 +34,7 @@ import {
   ResultProcessorMapping,
   ResultReducer,
   ResultReducerMapping,
+  protocol,
 } from '../scrapql';
 
 // properties query contains optional queries that may or may not be present
@@ -120,3 +126,84 @@ export function resultExamples<R extends PropertiesResult>(
 ): Examples<R> {
   return NEGenF_.sequenceS(subResults) as Examples<R>;
 }
+
+export const bundle = <
+  O extends Record<P, Protocol<any, any, E, C, QA, RA>>,
+  P extends Property,
+  E extends Err,
+  C extends Context,
+  QA extends Resolvers,
+  RA extends Reporters
+>(
+  subProtocols: O,
+): Protocol<
+  PropertiesQuery<{ [I in keyof O]: t.TypeOf<O[I]['Query']> }>,
+  PropertiesResult<{ [I in keyof O]: t.TypeOf<O[I]['Result']> }>,
+  E,
+  C,
+  QA,
+  RA
+> =>
+  protocol({
+    Query: t.partial(
+      pipe(
+        subProtocols,
+        Record_.map((subProtocol: O[keyof O]) => subProtocol.Query) as any,
+        (x) => x as { [I in keyof O]: O[I]['Query'] },
+      ),
+    ),
+    Result: t.partial(
+      pipe(
+        subProtocols,
+        Record_.map((subProtocol: O[keyof O]) => subProtocol.Result),
+        (x) => x as { [I in keyof O]: O[I]['Result'] },
+      ),
+    ),
+    Err: pipe(
+      subProtocols,
+      Record_.map((subProtocol: O[keyof O]) => subProtocol.Err),
+      (x) => x as { [I in keyof O]: O[I]['Err'] },
+      Record_.toArray,
+      Array_.map(([_k, v]) => v),
+      NonEmptyArray_.fromArray,
+      Option_.fold(
+        (): ErrCodec<E> => (t.unknown as unknown) as ErrCodec<E>,
+        ([Err]) => Err,
+      ),
+    ),
+    processQuery: processQuery(
+      pipe(
+        subProtocols,
+        Record_.map((subProtocol: O[keyof O]) => subProtocol.processQuery),
+        (x) => x as { [I in keyof O]: O[I]['processQuery'] },
+      ),
+    ),
+    processResult: processResult(
+      pipe(
+        subProtocols,
+        Record_.map((subProtocol: O[keyof O]) => subProtocol.processResult),
+        (x) => x as any,
+      ),
+    ),
+    reduceResult: reduceResult(
+      pipe(
+        subProtocols,
+        Record_.map((subProtocol: O[keyof O]) => subProtocol.reduceResult),
+        (x) => x as any,
+      ),
+    ),
+    queryExamples: queryExamples(
+      pipe(
+        subProtocols,
+        Record_.map((subProtocol: O[keyof O]) => subProtocol.queryExamples),
+        (x) => x as { [I in keyof O]: O[I]['queryExamples'] },
+      ),
+    ),
+    resultExamples: resultExamples(
+      pipe(
+        subProtocols,
+        Record_.map((subProtocol: O[keyof O]) => subProtocol.resultExamples),
+        (x) => x as { [I in keyof O]: O[I]['resultExamples'] },
+      ),
+    ),
+  } as any);

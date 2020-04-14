@@ -8,18 +8,24 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import {
   Context,
+  Err,
   Examples,
+  LeafProtocolSeed,
   LeafQuery,
   LeafResult,
   LeafResultCombiner,
+  Protocol,
+  Query,
   QueryProcessor,
   ReduceFailure,
   ReporterConnector,
   Reporters,
   ResolverConnector,
   Resolvers,
+  Result,
   ResultProcessor,
   examples,
+  protocol,
 } from '../scrapql';
 
 // leaf query contains information for retrieving a payload
@@ -72,3 +78,24 @@ export function resultExamples<R extends LeafResult>(
 ): Examples<R> {
   return examples(results);
 }
+
+export const bundle = <
+  Q extends Query,
+  R extends Result,
+  E extends Err,
+  C extends Context,
+  QA extends Resolvers,
+  RA extends Reporters
+>(
+  seed: LeafProtocolSeed<Q, R, E, C, QA, RA>,
+): Protocol<Q, R, E, C, QA, RA> =>
+  protocol({
+    Query: seed.Query,
+    Result: seed.Result,
+    Err: seed.Err,
+    processQuery: processQuery(seed.queryConnector),
+    processResult: processResult(seed.resultConnector),
+    reduceResult: reduceResult(seed.resultCombiner),
+    queryExamples: queryExamples(seed.queryExamplesArray),
+    resultExamples: resultExamples(seed.resultExamplesArray),
+  });
