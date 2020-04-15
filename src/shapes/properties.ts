@@ -16,7 +16,6 @@ import * as NEGenF_ from '../negf';
 
 import {
   Context,
-  Err,
   ErrCodec,
   Examples,
   PropertiesQuery,
@@ -127,82 +126,83 @@ export function resultExamples<R extends PropertiesResult>(
   return NEGenF_.sequenceS(subResults) as Examples<R>;
 }
 
-export const bundle = <
-  O extends Record<P, Protocol<any, any, E, C, QA, RA>>,
-  P extends Property,
-  E extends Err,
-  C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters
->(
+export const bundle = <O extends Record<string, Protocol<any, any, any, any, any, any>>>(
   subProtocols: O,
 ): Protocol<
-  PropertiesQuery<{ [I in keyof O]: t.TypeOf<O[I]['Query']> }>,
-  PropertiesResult<{ [I in keyof O]: t.TypeOf<O[I]['Result']> }>,
-  E,
-  C,
-  QA,
-  RA
+  PropertiesQuery<
+    {
+      [P in keyof O]: O[P] extends Protocol<infer Q, any, any, any, any, any> ? Q : never;
+    }
+  >,
+  PropertiesResult<
+    {
+      [P in keyof O]: O[P] extends Protocol<any, infer R, any, any, any, any> ? R : never;
+    }
+  >,
+  O extends Record<any, Protocol<any, any, infer E, any, any, any>> ? E : never,
+  O extends Record<any, Protocol<any, any, any, infer C, any, any>> ? C : never,
+  O extends Record<any, Protocol<any, any, any, any, infer QA, any>> ? QA : never,
+  O extends Record<any, Protocol<any, any, any, any, any, infer RA>> ? RA : never
 > =>
   protocol({
     Query: t.partial(
       pipe(
         subProtocols,
-        Record_.map((subProtocol: O[keyof O]) => subProtocol.Query) as any,
+        Record_.map((subProtocol: any) => subProtocol.Query) as any,
         (x) => x as { [I in keyof O]: O[I]['Query'] },
       ),
     ),
     Result: t.partial(
       pipe(
         subProtocols,
-        Record_.map((subProtocol: O[keyof O]) => subProtocol.Result),
+        Record_.map((subProtocol: any) => subProtocol.Result),
         (x) => x as { [I in keyof O]: O[I]['Result'] },
       ),
     ),
     Err: pipe(
       subProtocols,
-      Record_.map((subProtocol: O[keyof O]) => subProtocol.Err),
+      Record_.map((subProtocol: any) => subProtocol.Err),
       (x) => x as { [I in keyof O]: O[I]['Err'] },
       Record_.toArray,
       Array_.map(([_k, v]) => v),
       NonEmptyArray_.fromArray,
       Option_.fold(
-        (): ErrCodec<E> => (t.unknown as unknown) as ErrCodec<E>,
+        (): ErrCodec<any> => t.unknown,
         ([Err]) => Err,
       ),
     ),
     processQuery: processQuery(
       pipe(
         subProtocols,
-        Record_.map((subProtocol: O[keyof O]) => subProtocol.processQuery),
+        Record_.map((subProtocol: any) => subProtocol.processQuery),
         (x) => x as { [I in keyof O]: O[I]['processQuery'] },
       ),
     ),
     processResult: processResult(
       pipe(
         subProtocols,
-        Record_.map((subProtocol: O[keyof O]) => subProtocol.processResult),
+        Record_.map((subProtocol: any) => subProtocol.processResult),
         (x) => x as any,
       ),
     ),
     reduceResult: reduceResult(
       pipe(
         subProtocols,
-        Record_.map((subProtocol: O[keyof O]) => subProtocol.reduceResult),
+        Record_.map((subProtocol: any) => subProtocol.reduceResult),
         (x) => x as any,
       ),
     ),
     queryExamples: queryExamples(
       pipe(
         subProtocols,
-        Record_.map((subProtocol: O[keyof O]) => subProtocol.queryExamples),
+        Record_.map((subProtocol: any) => subProtocol.queryExamples),
         (x) => x as { [I in keyof O]: O[I]['queryExamples'] },
       ),
     ),
     resultExamples: resultExamples(
       pipe(
         subProtocols,
-        Record_.map((subProtocol: O[keyof O]) => subProtocol.resultExamples),
+        Record_.map((subProtocol: any) => subProtocol.resultExamples),
         (x) => x as { [I in keyof O]: O[I]['resultExamples'] },
       ),
     ),
