@@ -2,6 +2,9 @@
   "extends": [
     "eslint-config-maasglobal-ts"
   ],
+  "plugins":  [
+    "markdown"
+  ],
   "overrides": [
     {
       "files": ["src/readme.ts"],
@@ -11,6 +14,18 @@
         "no-restricted-imports": 0,
         "prettier/prettier": 0,
         "simple-import-sort/sort": 0
+      }
+    },
+    {
+      "files": ["**/*.md"],
+      "processor": "markdown/markdown"
+    },
+    {
+      "files": ["**/*.md/*.ts"],
+      "rules": {
+        "import/order": 0,
+        "prettier/prettier": 0,
+        "@typescript-eslint/consistent-type-definitions": 0
       }
     }
   ]

@@ -11,7 +11,7 @@ In this tutorial we explain how you can use ScrapQL in a simple project with
 customers and profit reports.  We will use the following database mock
 throughout the tutorial.
 
-```typescript
+```ts
 const example: any = {
   customers: {
     c001: {
@@ -57,7 +57,7 @@ const db: Database = {
 
 ## Define Data Types
 
-```typescript
+```ts
 import * as t from 'io-ts';
 
 const CustomerId = t.string;
@@ -80,7 +80,7 @@ type Report = t.TypeOf<typeof Report>;
 
 ## Define Query Driver
 
-```typescript
+```ts
 
 import { Ctx, Ctx0, Wsp, Wsp0, Existence } from 'scrapql';
 import * as scrapql from 'scrapql';
@@ -111,7 +111,7 @@ type Driver = Resolvers & Reporters
 
 ## Define Query Literals
 
-```typescript
+```ts
 
 // name and version from package.json
 const packageName = 'scrapql-example-app';
@@ -138,7 +138,7 @@ const Version: Version = scrapql.literal.bundle({
 
 ## Define Query Leafs
 
-```typescript
+```ts
 type GetCustomer = scrapql.LeafBundle<
   Err,
   Ctx<[CustomerId]>,
@@ -189,7 +189,7 @@ const GetReport: GetReport = scrapql.leaf.bundle({
 
 ## Define Query Structure
 
-```typescript
+```ts
 type CustomerOps = scrapql.PropertiesBundle<{
   get: GetCustomer;
 }>;
@@ -264,7 +264,7 @@ type Result = t.TypeOf<typeof Result>;
 
 You can use the query validator to validate JSON queries as follows.
 
-```typescript
+```ts
 import { validator } from 'io-ts-validator';
 
 const rawQuery: Json = {
@@ -285,7 +285,7 @@ const wireQuery: string = validator(Query, 'json').encodeSync(exampleQuery);
 
 ## Implement Query Resolvers
 
-```typescript
+```ts
 const resolvers: Resolvers = {
   fetchReport: (_queryArgs, [year]) => P.pipe(
     () => db.getReport(year),
@@ -312,7 +312,7 @@ const resolvers: Resolvers = {
 
 You can now process a query as follows.
 
-```typescript
+```ts
 import * as ruins from 'ruins-ts';
 
 async function generateExampleOutput(input: string) {
@@ -327,7 +327,7 @@ generateExampleOutput(wireQuery);
 
 The result object should look as follows.
 
-```typescript
+```ts
 const rawResult: Json = {
   protocol: 'scrapql-example-app/0.0.1/scrapql/result',
   reports: [
@@ -372,14 +372,14 @@ const rawResult: Json = {
 
 We can now use the result validator to encode the result as JSON.
 
-```typescript
+```ts
 const exampleResult: Result = validator(Result).decodeSync(rawResult);
 const wireResult: string = validator(Result, 'json').encodeSync(exampleResult);
 ```
 
 It all comes together as the following query processor.
 
-```typescript
+```ts
 async function wireQueryProcessor(input: string): Promise<string> {
   const queryProcessor = scrapql.processQuery(Root, resolvers);
   const query: Query = await validator(Query, 'json').decodePromise(input);
@@ -391,7 +391,7 @@ async function wireQueryProcessor(input: string): Promise<string> {
 
 ## Implement Result Reporters
 
-```typescript
+```ts
 const reporters: Reporters = {
 
   receiveReport: (report, [_query, year]) => () => {
@@ -411,7 +411,7 @@ const reporters: Reporters = {
 
 ## Define Request and Response formats
 
-```typescript
+```ts
 import { either as tEither } from 'io-ts-types/lib/either';
 
 const Request = <D extends t.Mixed>(DataC: D) => DataC
@@ -423,7 +423,7 @@ type Response<E, D> = P.Either<E, D>
 
 ## Implement Client and Server
 
-```typescript
+```ts
 import * as Console_ from 'fp-ts/lib/Console';
 
 

@@ -4,6 +4,8 @@
     "*.js",
     "*.json",
     "src/**/*.ts",
+    "README.md",
+    "README.md/*.ts",
     "./**/tsconfig.json"
   ],
   "exclude": [
