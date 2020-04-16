@@ -10,7 +10,7 @@ In this tutorial we explain how you can use ScrapQL in a simple project with
 customers and profit reports.  We will use the following database mock
 throughout the tutorial.
 
-```typescript
+```ts
 const example: any = {
   customers: {
     c001: {
@@ -59,7 +59,7 @@ const db: Database = {
 
 ## Define Data Validators
 
-```typescript
+```ts
 import * as t from 'io-ts';
 
 const CustomerId = t.string;
@@ -85,7 +85,7 @@ type Errors = t.TypeOf<typeof Errors>;
 
 ## Define Query Validator
 
-```typescript
+```ts
 
 import { Dict } from 'scrapql/lib/dict';
 
@@ -109,7 +109,7 @@ type Query = t.TypeOf<typeof Query>;
 
 You can use the query validator to validate JSON queries as follows.
 
-```typescript
+```ts
 import { validator } from 'io-ts-validator';
 
 const exampleJsonQuery: Json = {
@@ -129,7 +129,7 @@ const exampleQuery: Query = validator(Query).decodeSync(exampleJsonQuery);
 
 ## Define Query Resolvers
 
-```typescript
+```ts
 import { Task } from 'fp-ts/lib/Task';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
 
@@ -171,7 +171,7 @@ const resolvers: Resolvers = {
 
 ## Define Query Processor
 
-```typescript
+```ts
 import * as scrapql from 'scrapql';
 import { QueryProcessor, Ctx0 } from 'scrapql';
 
@@ -196,7 +196,7 @@ const processQuery: QueryProcessor<Query, Result, Resolvers, Ctx0> = scrapql.pro
 
 You can run the processor as follows.
 
-```typescript
+```ts
 import { processorInstance, ctx0 } from 'scrapql';
 
 async function generateExampleOutput() {
@@ -211,7 +211,7 @@ generateExampleOutput();
 
 The result object should look as follows.
 
-```typescript
+```ts
 const exampleResult = {
   protocol: 'scrapql-example-app/0.0.1/scrapql/result',
   reports: [
@@ -258,7 +258,7 @@ const exampleResult = {
 
 Now that we know what the output will look like we can define a result validator.
 
-```typescript
+```ts
 import { option as tOption } from 'io-ts-types/lib/option';
 import { either as tEither } from 'io-ts-types/lib/either';
 
@@ -276,13 +276,13 @@ type Result = t.TypeOf<typeof Result>;
 
 We can now use the result validator to encode the result as JSON.
 
-```typescript
+```ts
 const exampleJsonResult: Json = JSON.parse(JSON.stringify(Result.encode(exampleResult)));
 ```
 
 It all comes together as the following query processor.
 
-```typescript
+```ts
 async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
   const qp = processorInstance(processQuery, resolvers, ctx0);
   const q: Query = await validator(Query).decodePromise(jsonQuery);
@@ -295,7 +295,7 @@ async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
 
 ## Define Result Reporters
 
-```typescript
+```ts
 import { Either } from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 
@@ -337,7 +337,7 @@ const reporters: Reporters = {
 
 ## Define Result Processor
 
-```typescript
+```ts
 import { ResultProcessor } from 'scrapql';
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
@@ -362,7 +362,7 @@ const processResult: ResultProcessor<Result, Reporters, Ctx0> = scrapql.properti
 A scrapql protocol bundle contains all of the tools we created above.
 Creating one is not necessary but may be useful.
 
-```typescript
+```ts
 import { Protocol, examples } from 'scrapql';
 
 type Bundle = Protocol<
@@ -393,7 +393,7 @@ const exampleBundle: Partial<Bundle> = {
 Now that we have a query processor we can finally use it to process queries.
 The query processor works as follows.
 
-```typescript
+```ts
 import * as IOEither_ from 'fp-ts/lib/IOEither';
 
 async function server(request: string): Promise<string> {
