@@ -7,7 +7,9 @@ import * as Option_ from 'fp-ts/lib/Option';
 import { Either, either } from 'fp-ts/lib/Either';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
-import { Task, task, taskSeq } from 'fp-ts/lib/Task';
+import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
+import { Task, taskSeq } from 'fp-ts/lib/Task';
+import { TaskEither, taskEither } from 'fp-ts/lib/TaskEither';
 import { array } from 'fp-ts/lib/Array';
 import { identity } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
@@ -16,6 +18,7 @@ import * as NEGenF_ from '../negf';
 
 import {
   Context,
+  Err,
   ErrCodec,
   Examples,
   PropertiesQuery,
@@ -42,13 +45,14 @@ export function processQuery<
   A extends Resolvers,
   Q extends PropertiesQuery,
   R extends PropertiesResult,
+  E extends Err,
   C extends Context
->(processors: QueryProcessorMapping<A, Q, R, C>): QueryProcessor<Q, R, A, C> {
+>(processors: QueryProcessorMapping<A, Q, R, E, C>): QueryProcessor<Q, R, E, A, C> {
   return <P extends Property & keyof Q & keyof R>(query: Q) => (
     context: C,
-  ): ReaderTask<A, R> => {
+  ): ReaderTaskEither<A, E, R> => {
     return (resolvers) => {
-      const tasks: Record<P, Task<R[P]>> = pipe(
+      const tasks: Record<P, TaskEither<E, R[P]>> = pipe(
         query,
         Record_.mapWithIndex((property, subQuery: Q[P]) => {
           const processor = processors[property];
@@ -56,9 +60,9 @@ export function processQuery<
           return subResult;
         }),
       );
-      const result: Task<Record<P, R[P]>> = Record_.sequence(task)(tasks);
+      const result: TaskEither<E, Record<P, R[P]>> = Record_.sequence(taskEither)(tasks);
 
-      return result as Task<R>;
+      return result as TaskEither<E, R>;
     };
   };
 }
