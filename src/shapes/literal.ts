@@ -30,12 +30,12 @@ import {
 // literal query contains static information that can be replaced with another literal
 
 export function processQuery<
-  A extends Resolvers,
   Q extends LiteralQuery,
-  R extends LiteralResult,
   E extends Err,
-  C extends Context
->(constant: R): QueryProcessor<Q, R, E, A, C> {
+  C extends Context,
+  A extends Resolvers,
+  R extends LiteralResult
+>(constant: R): QueryProcessor<Q, R, E, C, A> {
   return (_query: Q) => (_context: C): ReaderTaskEither<A, E, R> => {
     return (_resolvers) => TaskEither_.right(constant);
   };
@@ -44,10 +44,10 @@ export function processQuery<
 // literal result is known on forehand so we throw it away
 
 export function processResult<
-  A extends Reporters,
   R extends LiteralResult,
-  C extends Context
->(): ResultProcessor<R, A, C> {
+  C extends Context,
+  A extends Reporters
+>(): ResultProcessor<R, C, A> {
   return (_result: R) => (_context: C): ReaderTask<A, void> => {
     return (_reporters) => Task_.of(undefined);
   };

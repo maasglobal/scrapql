@@ -11,12 +11,12 @@ import { array } from 'fp-ts/lib/Array';
 import { identity } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as Context_ from '../onion';
-import * as Dict_ from '../dict';
-import * as NEGenF_ from '../negf';
-import * as Onion_ from '../onion';
-import { Dict } from '../dict';
-import { Prepend } from '../onion';
+import * as Context_ from '../utils/onion';
+import * as Dict_ from '../utils/dict';
+import * as NEGenF_ from '../utils/negf';
+import * as Onion_ from '../utils/onion';
+import { Dict } from '../utils/dict';
+import { Prepend } from '../utils/onion';
 
 import {
   Context,
@@ -51,18 +51,18 @@ import {
 // search query requests some information that may zero or more instances in the database
 
 export function processQuery<
-  A extends Resolvers,
   Q extends SearchQuery<SQ, T>,
+  E extends Err,
+  C extends Context,
+  A extends Resolvers,
   T extends Terms,
   I extends Id,
   SQ extends Query,
-  SR extends Result,
-  C extends Context,
-  E extends Err
+  SR extends Result
 >(
-  connect: ResolverConnector<A, TermsQuery<T>, TermsResult<I>, E, C>,
-  subProcessor: QueryProcessor<SQ, SR, E, A, Prepend<I, C>>,
-): QueryProcessor<Q, SearchResult<SR, T, I>, E, A, C> {
+  connect: ResolverConnector<TermsQuery<T>, TermsResult<I>, E, C, A>,
+  subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, A>,
+): QueryProcessor<Q, SearchResult<SR, T, I>, E, C, A> {
   return (query: Q) => (context: C): ReaderTaskEither<A, E, SearchResult<SR, T, I>> => {
     return (resolvers) => {
       const tasks: Dict<T, TaskEither<E, Dict<I, SR>>> = pipe(
@@ -96,17 +96,16 @@ export function processQuery<
 // search result contains data that may contain zero or more instances in the database
 
 export function processResult<
-  A extends Reporters,
   R extends SearchResult<SR, T, I>,
+  C extends Context,
+  A extends Reporters,
   T extends Terms,
   I extends Id,
-  SR extends Result,
-  C extends Context,
-  E extends Err
+  SR extends Result
 >(
-  connect: ReporterConnector<A, TermsResult<I>, Prepend<T, C>>,
-  subProcessor: ResultProcessor<SR, A, Prepend<I, C>>,
-): ResultProcessor<R, A, C> {
+  connect: ReporterConnector<TermsResult<I>, Prepend<T, C>, A>,
+  subProcessor: ResultProcessor<SR, Prepend<I, C>, A>,
+): ResultProcessor<R, C, A> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters): Task<void> => {
       const tasks: Array<Task<void>> = pipe(
@@ -138,12 +137,7 @@ export function processResult<
   };
 }
 
-export const reduceResult = <
-  T extends Terms,
-  I extends Id,
-  E extends Err,
-  SR extends Result
->(
+export const reduceResult = <T extends Terms, I extends Id, SR extends Result>(
   reduceSubResult: ResultReducer<SR>,
 ) => (
   results: NonEmptyArray<SearchResult<SR, T, I>>,
@@ -166,12 +160,7 @@ export function queryExamples<T extends Terms, SQ extends Result>(
   );
 }
 
-export function resultExamples<
-  T extends Terms,
-  I extends Id,
-  E extends Err,
-  SR extends Result
->(
+export function resultExamples<T extends Terms, I extends Id, SR extends Result>(
   termss: Examples<T>,
   ids: Examples<I>,
   subResults: Examples<SR>,
@@ -198,8 +187,8 @@ export const bundle = <
   terms: { Terms: TermsCodec<T>; termsExamples: NonEmptyArray<T> },
   id: { Id: IdCodec<I>; idExamples: NonEmptyArray<I> },
   item: Protocol<Q, R, E, Prepend<I, C>, QA, RA>,
-  queryConnector: ResolverConnector<QA, TermsQuery<T>, TermsResult<I>, E, C>,
-  resultConnector: ReporterConnector<RA, TermsResult<I>, Prepend<T, C>>,
+  queryConnector: ResolverConnector<TermsQuery<T>, TermsResult<I>, E, C, QA>,
+  resultConnector: ReporterConnector<TermsResult<I>, Prepend<T, C>, RA>,
 ): Protocol<SearchQuery<Q, T>, SearchResult<R, T, I>, E, C, QA, RA> =>
   protocol({
     Query: Dict(terms.Terms, item.Query),

@@ -16,6 +16,7 @@
     "resolveJsonModule": true,
     "typeRoots": ["./node_modules/@types"],
     "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "downlevelIteration": true,
     "declaration": true,
     "outDir": "./lib"

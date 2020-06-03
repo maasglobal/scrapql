@@ -32,12 +32,12 @@ import {
 // leaf query contains information for retrieving a payload
 
 export function processQuery<
-  A extends Resolvers,
   Q extends LeafQuery,
-  R extends LeafResult,
   E extends Err,
-  C extends Context
->(connect: ResolverConnector<A, Q, R, E, C>): QueryProcessor<Q, R, E, A, C> {
+  C extends Context,
+  A extends Resolvers,
+  R extends LeafResult
+>(connect: ResolverConnector<Q, R, E, C, A>): QueryProcessor<Q, R, E, C, A> {
   return (query: Q) => (context: C): ReaderTaskEither<A, E, R> => {
     return (resolvers) => {
       const resolver = connect(resolvers);
@@ -49,10 +49,10 @@ export function processQuery<
 // leaf result contains part of the payload
 
 export function processResult<
-  A extends Reporters,
   R extends LeafResult,
-  C extends Context
->(connect: ReporterConnector<A, R, C>): ResultProcessor<R, A, C> {
+  C extends Context,
+  A extends Reporters
+>(connect: ReporterConnector<R, C, A>): ResultProcessor<R, C, A> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
       const reporter = connect(reporters);
