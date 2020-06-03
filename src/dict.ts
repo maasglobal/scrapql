@@ -2,11 +2,13 @@ import * as t from 'io-ts';
 
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { Task, task } from 'fp-ts/lib/Task';
+import { TaskEither, taskEither } from 'fp-ts/lib/TaskEither';
 import { Either, either } from 'fp-ts/lib/Either';
-import { Option, option } from 'fp-ts/lib/Option';
+import { Option } from 'fp-ts/lib/Option';
 import { sequenceT } from 'fp-ts/lib/Apply';
 import { array } from 'fp-ts/lib/Array';
 import * as Option_ from 'fp-ts/lib/Option';
+import * as Either_ from 'fp-ts/lib/Either';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
@@ -44,6 +46,18 @@ export function sequenceEither<K, V, E>(
   dict: Dict<K, Either<E, V>>,
 ): Either<E, Dict<K, V>> {
   return pipe(dict, Array_.map(sequenceKVEither), array.sequence(either));
+}
+
+export function sequenceKVTaskEither<K, E, V>([k, v]: [K, TaskEither<E, V>]): TaskEither<
+  E,
+  [K, V]
+> {
+  return sequenceT(taskEither)(taskEither.of(k), v);
+}
+export function sequenceTaskEither<K, E, V>(
+  dict: Dict<K, TaskEither<E, V>>,
+): TaskEither<E, Dict<K, V>> {
+  return pipe(dict, Array_.map(sequenceKVTaskEither), array.sequence(taskEither));
 }
 
 export function lookup<K>(k: K) {
@@ -103,20 +117,22 @@ const transpose = <A>(outer: NonEmptyArray<Array<A>>): Array<NonEmptyArray<A>> =
     ),
   );
 
-export const mergeSymmetric = <A, B>(
-  reduceValues: (vs: NonEmptyArray<A>) => Option<B>,
-) => <K>(dicts: NonEmptyArray<Dict<K, A>>): Option<Dict<K, B>> =>
+export const mergeSymmetric = <A, B, E>(
+  keyMismatch: () => E,
+  reduceValues: (vs: NonEmptyArray<A>) => Either<E, B>,
+) => <K>(dicts: NonEmptyArray<Dict<K, A>>): Either<E, Dict<K, B>> =>
   pipe(
     dicts,
     transpose,
     Array_.map(
-      (variants: NonEmptyArray<[K, A]>): Option<[K, B]> =>
+      (variants: NonEmptyArray<[K, A]>): Either<E, [K, B]> =>
         pipe(
           {
             k: pipe(
               variants,
               NonEmptyArray_.map(([k, _v]) => k),
               reduceDuplicateKeys,
+              Either_.fromOption(keyMismatch),
             ),
             v: pipe(
               variants,
@@ -124,11 +140,11 @@ export const mergeSymmetric = <A, B>(
               reduceValues,
             ),
           },
-          sequenceS(option),
-          Option_.map(({ k, v }) => [k, v]),
+          sequenceS(either),
+          Either_.map(({ k, v }) => [k, v]),
         ),
     ),
-    array.sequence(option),
+    array.sequence(either),
   );
 
 export const rewireDict = {

@@ -178,31 +178,32 @@ import { QueryProcessor, Ctx0 } from 'scrapql';
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
-const processQuery: QueryProcessor<Query, Result, Resolvers, Ctx0> = scrapql.properties.processQuery<Resolvers, Query, Result, Ctx0>({
+const processQuery: QueryProcessor<Query, Result, Errors, Resolvers, Ctx0> = scrapql.properties.processQuery<Resolvers, Query, Result, Errors, Ctx0>({
   protocol: scrapql.literal.processQuery(RESULT_PROTOCOL),
     reports: scrapql.keys.processQuery(
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchReport)
-      }) as QueryProcessor<{ get: true }, { get: Either<Errors, Report> }, Resolvers, Ctx<Year>> ,
+      }) as QueryProcessor<{ get: true }, { get: Report }, Errors, Resolvers, Ctx<Year>> ,
     ),
     customers: scrapql.ids.processQuery(
       (r: Resolvers) => r.checkCustomerExistence,
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchCustomer),
-      }) as QueryProcessor<{ get: true }, { get: Either<Errors, Customer> }, Resolvers, Ctx<CustomerId>>,
-    ) as QueryProcessor<Dict<CustomerId, { get: true; }>, Dict<CustomerId, Either<Errors, { get: Either<Errors, Option<Customer>>; }>>, Resolvers, Ctx0>,
-  }) as QueryProcessor<Query, Result, Resolvers, Ctx0>;
+      }) as QueryProcessor<{ get: true }, { get: Customer }, Errors, Resolvers, Ctx<CustomerId>>,
+    ) as QueryProcessor<Dict<CustomerId, { get: true; }>, Dict<CustomerId, Option<{ get: Customer; }>>, Errors, Resolvers, Ctx0>,
+  }) as QueryProcessor<Query, Result, Errors, Resolvers, Ctx0>;
 ```
 
 You can run the processor as follows.
 
 ```typescript
 import { processorInstance, ctx0 } from 'scrapql';
+import * as ruins from 'ruins-ts';
 
 async function generateExampleOutput() {
   const qp = processorInstance(processQuery, resolvers, ctx0);
   const q: Query = await validator(Query).decodePromise(exampleJsonQuery);
-  const output = await qp(q)();
+  const output = await ruins.fromTaskEither(qp(q));
   console.log(output);
 }
 
@@ -260,15 +261,14 @@ Now that we know what the output will look like we can define a result validator
 
 ```typescript
 import { option as tOption } from 'io-ts-types/lib/option';
-import { either as tEither } from 'io-ts-types/lib/either';
 
 const Result = t.type({
   protocol: t.literal(RESULT_PROTOCOL),
   reports: Dict(Year, t.type({
-    get: tEither(Errors, Report),
+    get: Report,
   })),
-  customers: Dict(CustomerId, tEither(Errors, t.type({
-    get: tEither(Errors, tOption(Customer)),
+  customers: Dict(CustomerId, tOption(t.type({
+    get: Customer,
   }))),
 });
 type Result = t.TypeOf<typeof Result>;
@@ -286,7 +286,7 @@ It all comes together as the following query processor.
 async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
   const qp = processorInstance(processQuery, resolvers, ctx0);
   const q: Query = await validator(Query).decodePromise(jsonQuery);
-  const r: Result = await qp(q)();
+  const r: Result = await ruins.fromTaskEither(qp(q));
   const jsonResult: Json = JSON.parse(JSON.stringify(Result.encode(r)));
   return jsonResult;
 }
@@ -300,36 +300,24 @@ import { Either } from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 
 interface Reporters {
-  readonly receiveReport: (a: Either<Errors, Report>, b: Ctx<Year> ) => Task<void>;
-  readonly receiveCustomer: (a: Either<Errors, Option<Customer>>, b: Ctx<CustomerId>) => Task<void>;
-  readonly learnCustomerExistence: (a: Either<Errors, boolean>, b: Ctx<CustomerId>) => Task<void>;
+  readonly receiveReport: (a: Report, b: Ctx<Year> ) => Task<void>;
+  readonly receiveCustomer: (a: Option<Customer>, b: Ctx<CustomerId>) => Task<void>;
+  readonly learnCustomerExistence: (a: boolean, b: Ctx<CustomerId>) => Task<void>;
 }
 
 const reporters: Reporters = {
 
-  receiveReport: (result, [year]) => pipe(
-    result,
-    Either_.fold(
-      (errors) => () => Promise.resolve(console.error(year, errors)),
-      (report) => () => Promise.resolve(console.log(year, report)),
-    ),
-  ),
+  receiveReport: (report, [year]) => () => {
+    return Promise.resolve(console.log(year, report));
+  },
 
-  receiveCustomer: (result, [customerId]) => pipe(
-    result,
-    Either_.fold(
-      (errors) => () => Promise.resolve(console.error(customerId, errors)),
-      (customer) => () => Promise.resolve(console.log(customerId, customer)),
-    ),
-  ),
+  receiveCustomer: (customer, [customerId]) => () => {
+    return Promise.resolve(console.log(customerId, customer));
+  },
 
-  learnCustomerExistence: (result, [customerId]) => pipe(
-    result,
-    Either_.fold(
-      (errors) => () => Promise.resolve(console.error(customerId, errors)),
-      (existence) => () => Promise.resolve(console.log(customerId, existence ? 'known customer' : 'unknown customer')),
-    ),
-  ),
+  learnCustomerExistence: (existence, [customerId]) => () => {
+    return Promise.resolve(console.log(customerId, existence ? 'known customer' : 'unknown customer'));
+  },
 
 };
 ```
@@ -342,19 +330,20 @@ import { ResultProcessor } from 'scrapql';
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
 const processResult: ResultProcessor<Result, Reporters, Ctx0> = scrapql.properties.processResult({
-    protocol: scrapql.literal.processResult(),
-    reports: scrapql.keys.processResult(
-      scrapql.properties.processResult({
-        get: scrapql.leaf.processResult((r: Reporters) => r.receiveReport)
-      }) as ResultProcessor<{ get: Either<Errors, Report> }, Reporters, Ctx<string>>,
-    ),
-    customers: scrapql.ids.processResult(
-      (r: Reporters) => r.learnCustomerExistence,
-      scrapql.properties.processResult({
-        get: scrapql.leaf.processResult((r: Reporters) => r.receiveCustomer)
-      }),
-    ),
-  }) as ResultProcessor<Result, Reporters, Ctx0>;
+  protocol: scrapql.literal.processResult(),
+  reports: scrapql.keys.processResult(
+    scrapql.properties.processResult({
+      get: scrapql.leaf.processResult((r: Reporters) => r.receiveReport)
+    }) as ResultProcessor<{ get: Report }, Reporters, Ctx<string>>,
+  ),
+  customers: scrapql.ids.processResult(
+    (r: Reporters) => r.learnCustomerExistence,
+    scrapql.properties.processResult({
+      get: scrapql.leaf.processResult((r: Reporters) => r.receiveCustomer)
+    }) as ResultProcessor<{ get: Customer }, Reporters, Ctx<string>>,
+  ),
+
+}) as ResultProcessor<Result, Reporters, Ctx0>;
 ```
 
 ## Define a Protocol Bundle
@@ -394,7 +383,9 @@ Now that we have a query processor we can finally use it to process queries.
 The query processor works as follows.
 
 ```typescript
+import * as Console_ from 'fp-ts/lib/Console';
 import * as IOEither_ from 'fp-ts/lib/IOEither';
+import { either as tEither } from 'io-ts-types/lib/either';
 
 async function server(request: string): Promise<string> {
   const main = pipe(
@@ -413,11 +404,22 @@ async function server(request: string): Promise<string> {
     TaskEither_.chain((query: Query) => pipe(
       processorInstance(processQuery, resolvers, ctx0),
       (qp) => qp(query),
-      Task_.map((result) => Either_.right(result)),
     )),
-    Task_.map((result: Either<Errors, Result>) => tEither(Errors, Result).encode(result)),
-    Task_.map((json) => pipe(
-      Either_.stringifyJSON(json, (reason) => String(reason)),
+    Task_.chainFirst((result: Either<Errors, Result>) => pipe(
+      result,
+      Either_.fold(
+        (errors) => Console_.error(['Error!'].concat(errors).join('\n')),
+        (_output) => Console_.log('Success!'),
+      ),
+      Task_.fromIO,
+    )),
+    Task_.map((result: Either<Errors, Result>) => pipe(
+      result,
+      Either_.fold(
+        (_errors): unknown => ({ error: 'Internal server error' }),
+        (xxx) => ({ data: Result.encode(xxx) }),
+      ),
+      (json) => Either_.stringifyJSON(json, (reason) => String(reason)),
     )),
     TaskEither_.fold(
       (errorString) => Task_.of(errorString), // JSON stringify failure

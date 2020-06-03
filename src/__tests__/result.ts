@@ -1,6 +1,5 @@
+import * as ruins from 'ruins-ts';
 import { Task } from 'fp-ts/lib/Task';
-import { Either } from 'fp-ts/lib/Either';
-import * as Either_ from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
 
@@ -31,11 +30,8 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 
 describe('result', () => {
   type Reporters = {
-    learnProperty1Existence: (
-      r: Either<Err1, scrapql.Existence>,
-      c: Ctx<Id>,
-    ) => Task<void>;
-    learnProperty3Match: (r: Either<Err1, Array<Id>>, c: Ctx<Terms>) => Task<void>;
+    learnProperty1Existence: (r: scrapql.Existence, c: Ctx<Id>) => Task<void>;
+    learnProperty3Match: (r: Array<Id>, c: Ctx<Terms>) => Task<void>;
     receiveKeyResult: (r: KeyResult, c: Ctx<Key, Ctx<Id>>) => Task<void>;
     receiveProperty2Result: (r: Property2Result, c: Ctx0) => Task<void>;
   };
@@ -43,10 +39,10 @@ describe('result', () => {
   function createReporters(): Reporters {
     return {
       learnProperty1Existence: loggerTask(
-        jest.fn((_0: Either<Err1, scrapql.Existence>, _1: Ctx<Id>) => undefined),
+        jest.fn((_0: scrapql.Existence, _1: Ctx<Id>) => undefined),
       ),
       learnProperty3Match: loggerTask(
-        jest.fn((_0: Either<Err1, Array<Id>>, _1: Ctx<Terms>) => undefined),
+        jest.fn((_0: Array<Id>, _1: Ctx<Terms>) => undefined),
       ),
       receiveKeyResult: loggerTask(
         jest.fn((_0: KeyResult, _1: Ctx<Key, Ctx<Id>>) => undefined),
@@ -89,7 +85,7 @@ describe('result', () => {
     const reporters = createReporters();
     const context: Ctx<Key, Ctx<Id>> = ctx(key1, ctx(id1));
     const main = scrapql.processorInstance(processKey, reporters, context)(key1Result);
-    await main();
+    await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [key1Result, ctx(key1, ctx(id1))],
@@ -107,7 +103,7 @@ describe('result', () => {
     const reporters = createReporters();
     const context: Ctx<Id> = ctx(id1);
     const main = scrapql.processorInstance(processKeys, reporters, context)(keysResult);
-    await main();
+    await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [key1Result, ctx(key1, ctx(id1))],
@@ -115,10 +111,10 @@ describe('result', () => {
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
-  type Property1Result = Dict<Id, Either<Err1, Option<KeysResult>>>;
+  type Property1Result = Dict<Id, Option<KeysResult>>;
   const property1Result: Property1Result = dict(
-    [id1, Either_.right(Option_.some(keysResult))],
-    [id2, Either_.right(Option_.none)],
+    [id1, Option_.some(keysResult)],
+    [id2, Option_.none],
   );
   const processProperty1: CustomRP<Property1Result, Ctx0> = scrapql.ids.processResult<
     Reporters,
@@ -137,11 +133,11 @@ describe('result', () => {
       reporters,
       context,
     )(property1Result);
-    await main();
+    await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
-      [Either_.right(true), ctx(id1)],
-      [Either_.right(false), ctx(id2)],
+      [false, ctx(id2)],
+      [true, ctx(id1)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [key1Result, ctx(key1, ctx(id1))],
@@ -163,7 +159,7 @@ describe('result', () => {
       reporters,
       context,
     )(property2Result);
-    await main();
+    await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([
@@ -171,11 +167,8 @@ describe('result', () => {
     ]);
   });
 
-  type Property3Result = Dict<Terms, Either<Err1, Dict<Id, KeysResult>>>;
-  const property3Result: Property3Result = dict([
-    terms,
-    Either_.right(dict([id1, keysResult])),
-  ]);
+  type Property3Result = Dict<Terms, Dict<Id, KeysResult>>;
+  const property3Result: Property3Result = dict([terms, dict([id1, keysResult])]);
   const processProperty3: CustomRP<Property3Result, Ctx0> = scrapql.search.processResult<
     Reporters,
     Property3Result,
@@ -194,10 +187,10 @@ describe('result', () => {
       reporters,
       context,
     )(property3Result);
-    await main();
+    await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty3Match as any).mock.calls.sort()).toMatchObject([
-      [Either_.right([id1]), ctx(terms)],
+      [[id1], ctx(terms)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [key1Result, ctx(key1, ctx(id1))],
@@ -231,15 +224,15 @@ describe('result', () => {
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
     const main = scrapql.processorInstance(processRoot, reporters, context)(rootResult);
-    await main();
+    await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
-      [Either_.right(true), ctx(id1)],
-      [Either_.right(false), ctx(id2)],
+      [false, ctx(id2)],
+      [true, ctx(id1)],
     ]);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty3Match as any).mock.calls.sort()).toMatchObject([
-      [Either_.right([id1]), ctx(terms)],
+      [[id1], ctx(terms)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [key1Result, ctx(key1, ctx(id1))],
@@ -287,15 +280,15 @@ describe('result', () => {
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
     const main = scrapql.processorInstance(processRoot, reporters, context)(rootResult);
-    await main();
+    await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
-      [Either_.right(true), ctx(id1)],
-      [Either_.right(false), ctx(id2)],
+      [false, ctx(id2)],
+      [true, ctx(id1)],
     ]);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty3Match as any).mock.calls.sort()).toMatchObject([
-      [Either_.right([id1]), ctx(terms)],
+      [[id1], ctx(terms)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
       [key1Result, ctx(key1, ctx(id1))],

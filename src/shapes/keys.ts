@@ -1,11 +1,10 @@
 import * as Array_ from 'fp-ts/lib/Array';
-import * as Either_ from 'fp-ts/lib/Either';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
-import * as Option_ from 'fp-ts/lib/Option';
 import { Either } from 'fp-ts/lib/Either';
+import { TaskEither } from 'fp-ts/lib/TaskEither';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
-import { Option } from 'fp-ts/lib/Option';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
+import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
 import { array } from 'fp-ts/lib/Array';
 import { identity } from 'fp-ts/lib/function';
@@ -48,21 +47,22 @@ export function processQuery<
   K extends Key,
   SQ extends Query,
   SR extends Result,
+  E extends Err,
   C extends Context
 >(
-  subProcessor: QueryProcessor<SQ, SR, A, Prepend<K, C>>,
-): QueryProcessor<Q, KeysResult<SR, K>, A, C> {
-  return (query: Q) => (context: C): ReaderTask<A, KeysResult<SR, K>> => {
+  subProcessor: QueryProcessor<SQ, SR, E, A, Prepend<K, C>>,
+): QueryProcessor<Q, KeysResult<SR, K>, E, A, C> {
+  return (query: Q) => (context: C): ReaderTaskEither<A, E, KeysResult<SR, K>> => {
     return (resolvers) =>
       pipe(
         query,
         Dict_.mapWithIndex(
-          (key: K, subQuery: SQ): Task<SR> => {
+          (key: K, subQuery: SQ): TaskEither<E, SR> => {
             const subContext = pipe(context, Context_.prepend(key));
             return subProcessor(subQuery)(subContext)(resolvers);
           },
         ),
-        Dict_.sequenceTask,
+        Dict_.sequenceTaskEither,
       );
   };
 }
@@ -77,7 +77,7 @@ export function processResult<
   C extends Context
 >(subProcessor: ResultProcessor<SR, A, Prepend<K, C>>): ResultProcessor<R, A, C> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
-    return (reporters) => {
+    return (reporters): Task<void> => {
       const tasks: Array<Task<void>> = pipe(
         result,
         Dict_.mapWithIndex((key: K, subResult: SR) => {
@@ -99,11 +99,10 @@ export const reduceResult = <K extends Key, SR extends Result>(
   pipe(
     results,
     Dict_.mergeSymmetric(
-      (subResultVariants: NonEmptyArray<SR>): Option<Either<ReduceFailure, SR>> =>
-        pipe(reduceSubResult(subResultVariants), Option_.some),
+      () => reduceeMismatch,
+      (subResultVariants: NonEmptyArray<SR>): Either<ReduceFailure, SR> =>
+        reduceSubResult(subResultVariants),
     ),
-    Either_.fromOption(() => reduceeMismatch),
-    Either_.chain(Dict_.sequenceEither),
   );
 
 export function queryExamples<K extends Key, SQ extends Query>(

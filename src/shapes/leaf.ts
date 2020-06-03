@@ -2,8 +2,9 @@ import * as Array_ from 'fp-ts/lib/Array';
 import * as Either_ from 'fp-ts/lib/Either';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { Either } from 'fp-ts/lib/Either';
-import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
+import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
+import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { pipe } from 'fp-ts/lib/pipeable';
 
 import {
@@ -34,9 +35,10 @@ export function processQuery<
   A extends Resolvers,
   Q extends LeafQuery,
   R extends LeafResult,
+  E extends Err,
   C extends Context
->(connect: ResolverConnector<A, Q, R, C>): QueryProcessor<Q, R, A, C> {
-  return (query: Q) => (context: C): ReaderTask<A, R> => {
+>(connect: ResolverConnector<A, Q, R, E, C>): QueryProcessor<Q, R, E, A, C> {
+  return (query: Q) => (context: C): ReaderTaskEither<A, E, R> => {
     return (resolvers) => {
       const resolver = connect(resolvers);
       return resolver(query, context);
