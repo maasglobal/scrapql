@@ -87,7 +87,7 @@ type Errors = t.TypeOf<typeof Errors>;
 
 ```typescript
 
-import { Dict } from 'scrapql/lib/dict';
+import { Dict } from 'scrapql';
 
 // name and version from package.json
 const packageName = 'scrapql-example-app';
@@ -178,20 +178,20 @@ import { QueryProcessor, Ctx0 } from 'scrapql';
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
-const processQuery: QueryProcessor<Query, Result, Errors, Resolvers, Ctx0> = scrapql.properties.processQuery<Resolvers, Query, Result, Errors, Ctx0>({
+const processQuery: QueryProcessor<Query, Result, Errors, Ctx0, Resolvers> = scrapql.properties.processQuery<Query, Errors, Ctx0, Resolvers, Result>({
   protocol: scrapql.literal.processQuery(RESULT_PROTOCOL),
     reports: scrapql.keys.processQuery(
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchReport)
-      }) as QueryProcessor<{ get: true }, { get: Report }, Errors, Resolvers, Ctx<Year>> ,
+      }) as QueryProcessor<{ get: true }, { get: Report }, Errors, Ctx<Year>, Resolvers> ,
     ),
     customers: scrapql.ids.processQuery(
       (r: Resolvers) => r.checkCustomerExistence,
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchCustomer),
-      }) as QueryProcessor<{ get: true }, { get: Customer }, Errors, Resolvers, Ctx<CustomerId>>,
-    ) as QueryProcessor<Dict<CustomerId, { get: true; }>, Dict<CustomerId, Option<{ get: Customer; }>>, Errors, Resolvers, Ctx0>,
-  }) as QueryProcessor<Query, Result, Errors, Resolvers, Ctx0>;
+      }) as QueryProcessor<{ get: true }, { get: Customer }, Errors, Ctx<CustomerId>, Resolvers>,
+    ) as QueryProcessor<Dict<CustomerId, { get: true; }>, Dict<CustomerId, Option<{ get: Customer; }>>, Errors, Ctx0, Resolvers>,
+  }) as QueryProcessor<Query, Result, Errors, Ctx0, Resolvers>;
 ```
 
 You can run the processor as follows.
@@ -201,7 +201,7 @@ import { processorInstance, ctx0 } from 'scrapql';
 import * as ruins from 'ruins-ts';
 
 async function generateExampleOutput() {
-  const qp = processorInstance(processQuery, resolvers, ctx0);
+  const qp = processorInstance(processQuery, ctx0, resolvers);
   const q: Query = await validator(Query).decodePromise(exampleJsonQuery);
   const output = await ruins.fromTaskEither(qp(q));
   console.log(output);
@@ -284,7 +284,7 @@ It all comes together as the following query processor.
 
 ```typescript
 async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
-  const qp = processorInstance(processQuery, resolvers, ctx0);
+  const qp = processorInstance(processQuery, ctx0, resolvers);
   const q: Query = await validator(Query).decodePromise(jsonQuery);
   const r: Result = await ruins.fromTaskEither(qp(q));
   const jsonResult: Json = JSON.parse(JSON.stringify(Result.encode(r)));
@@ -329,21 +329,21 @@ const reporters: Reporters = {
 import { ResultProcessor } from 'scrapql';
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
-const processResult: ResultProcessor<Result, Reporters, Ctx0> = scrapql.properties.processResult({
+const processResult: ResultProcessor<Result, Ctx0, Reporters> = scrapql.properties.processResult({
   protocol: scrapql.literal.processResult(),
   reports: scrapql.keys.processResult(
     scrapql.properties.processResult({
       get: scrapql.leaf.processResult((r: Reporters) => r.receiveReport)
-    }) as ResultProcessor<{ get: Report }, Reporters, Ctx<string>>,
+    }) as ResultProcessor<{ get: Report }, Ctx<string>, Reporters>,
   ),
   customers: scrapql.ids.processResult(
     (r: Reporters) => r.learnCustomerExistence,
     scrapql.properties.processResult({
       get: scrapql.leaf.processResult((r: Reporters) => r.receiveCustomer)
-    }) as ResultProcessor<{ get: Customer }, Reporters, Ctx<string>>,
+    }) as ResultProcessor<{ get: Customer }, Ctx<string>, Reporters>,
   ),
 
-}) as ResultProcessor<Result, Reporters, Ctx0>;
+}) as ResultProcessor<Result, Ctx0, Reporters>;
 ```
 
 ## Define a Protocol Bundle
@@ -402,7 +402,7 @@ async function server(request: string): Promise<string> {
       TaskEither_.fromEither,
     )),
     TaskEither_.chain((query: Query) => pipe(
-      processorInstance(processQuery, resolvers, ctx0),
+      processorInstance(processQuery, ctx0, resolvers),
       (qp) => qp(query),
     )),
     Task_.chainFirst((result: Either<Errors, Result>) => pipe(
@@ -454,7 +454,7 @@ async function client(query: Query): Promise<void> {
     TaskEither_.fold(
       (errors) => () => Promise.resolve(console.error(errors)),
       (result: Result) => pipe(
-        processorInstance( processResult, reporters, ctx0 ),
+        processorInstance( processResult, ctx0, reporters ),
         (rp) => rp(result),
       ),
     ),

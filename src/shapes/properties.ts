@@ -14,7 +14,7 @@ import { array } from 'fp-ts/lib/Array';
 import { identity } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as NEGenF_ from '../negf';
+import * as NEGenF_ from '../utils/negf';
 
 import {
   Context,
@@ -42,12 +42,12 @@ import {
 // properties query contains optional queries that may or may not be present
 
 export function processQuery<
-  A extends Resolvers,
   Q extends PropertiesQuery,
-  R extends PropertiesResult,
   E extends Err,
-  C extends Context
->(processors: QueryProcessorMapping<A, Q, R, E, C>): QueryProcessor<Q, R, E, A, C> {
+  C extends Context,
+  A extends Resolvers,
+  R extends PropertiesResult
+>(processors: QueryProcessorMapping<Q, R, E, C, A>): QueryProcessor<Q, R, E, C, A> {
   return <P extends Property & keyof Q & keyof R>(query: Q) => (
     context: C,
   ): ReaderTaskEither<A, E, R> => {
@@ -70,10 +70,10 @@ export function processQuery<
 // properties result contains results for a set of optional queries
 
 export function processResult<
-  A extends Reporters,
   R extends PropertiesResult,
-  C extends Context
->(processors: ResultProcessorMapping<A, R, C>): ResultProcessor<R, A, C> {
+  C extends Context,
+  A extends Reporters
+>(processors: ResultProcessorMapping<R, C, A>): ResultProcessor<R, C, A> {
   return <P extends Property & keyof R>(result: R) => (
     context: C,
   ): ReaderTask<A, void> => {

@@ -5,10 +5,8 @@ import * as Option_ from 'fp-ts/lib/Option';
 
 import { name, version } from '../../package.json';
 
-import { Ctx, Ctx0, ctx, ctx0 } from '../scrapql';
+import { Ctx, Ctx0, Dict, ctx, ctx0, dict } from '../scrapql';
 import * as scrapql from '../scrapql';
-
-import { Dict, dict } from '../dict';
 
 type Logger<R, A extends Array<any>> = {
   (...a: A): R;
@@ -53,11 +51,9 @@ describe('result', () => {
     };
   }
 
-  type CustomRP<R, C extends scrapql.Context> = scrapql.ResultProcessor<R, Reporters, C>;
+  type CustomRP<R, C extends scrapql.Context> = scrapql.ResultProcessor<R, C, Reporters>;
 
   const RESULT = `${name}/${version}/scrapql/test/result`;
-
-  type Err1 = 'error';
 
   type Id = string & ('id1' | 'id2');
   const id1: Id = 'id1';
@@ -84,7 +80,7 @@ describe('result', () => {
   it('processKey', async () => {
     const reporters = createReporters();
     const context: Ctx<Key, Ctx<Id>> = ctx(key1, ctx(id1));
-    const main = scrapql.processorInstance(processKey, reporters, context)(key1Result);
+    const main = scrapql.processorInstance(processKey, context, reporters)(key1Result);
     await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
@@ -102,7 +98,7 @@ describe('result', () => {
   it('processKeys', async () => {
     const reporters = createReporters();
     const context: Ctx<Id> = ctx(id1);
-    const main = scrapql.processorInstance(processKeys, reporters, context)(keysResult);
+    const main = scrapql.processorInstance(processKeys, context, reporters)(keysResult);
     await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
@@ -117,12 +113,11 @@ describe('result', () => {
     [id2, Option_.none],
   );
   const processProperty1: CustomRP<Property1Result, Ctx0> = scrapql.ids.processResult<
-    Reporters,
     Property1Result,
-    Id,
-    KeysResult,
     Ctx0,
-    Err1
+    Reporters,
+    Id,
+    KeysResult
   >((r) => r.learnProperty1Existence, processKeys);
 
   it('processProperty1', async () => {
@@ -130,8 +125,8 @@ describe('result', () => {
     const context: Ctx0 = ctx0;
     const main = scrapql.processorInstance(
       processProperty1,
-      reporters,
       context,
+      reporters,
     )(property1Result);
     await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
@@ -156,8 +151,8 @@ describe('result', () => {
     const context: Ctx0 = ctx0;
     const main = scrapql.processorInstance(
       processProperty2,
-      reporters,
       context,
+      reporters,
     )(property2Result);
     await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
@@ -170,13 +165,12 @@ describe('result', () => {
   type Property3Result = Dict<Terms, Dict<Id, KeysResult>>;
   const property3Result: Property3Result = dict([terms, dict([id1, keysResult])]);
   const processProperty3: CustomRP<Property3Result, Ctx0> = scrapql.search.processResult<
-    Reporters,
     Property3Result,
+    Ctx0,
+    Reporters,
     Terms,
     Id,
-    KeysResult,
-    Ctx0,
-    Err1
+    KeysResult
   >((r) => r.learnProperty3Match, processKeys);
 
   it('processProperty3', async () => {
@@ -184,8 +178,8 @@ describe('result', () => {
     const context: Ctx0 = ctx0;
     const main = scrapql.processorInstance(
       processProperty3,
-      reporters,
       context,
+      reporters,
     )(property3Result);
     await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
@@ -212,9 +206,9 @@ describe('result', () => {
 
   it('processRoot (composed)', async () => {
     const processRoot: CustomRP<RootResult, Ctx0> = scrapql.properties.processResult<
-      Reporters,
       RootResult,
-      Ctx0
+      Ctx0,
+      Reporters
     >({
       protocol: scrapql.literal.processResult(),
       property1: processProperty1,
@@ -223,7 +217,7 @@ describe('result', () => {
     });
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
-    const main = scrapql.processorInstance(processRoot, reporters, context)(rootResult);
+    const main = scrapql.processorInstance(processRoot, context, reporters)(rootResult);
     await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
@@ -242,36 +236,34 @@ describe('result', () => {
   });
 
   it('processRoot (standalone)', async () => {
-    const processRoot = scrapql.properties.processResult<Reporters, RootResult, Ctx0>({
+    const processRoot = scrapql.properties.processResult<RootResult, Ctx0, Reporters>({
       protocol: scrapql.literal.processResult(),
       property1: scrapql.ids.processResult<
-        Reporters,
         Property1Result,
-        Id,
-        KeysResult,
         Ctx0,
-        Err1
+        Reporters,
+        Id,
+        KeysResult
       >(
         (r: Reporters) => r.learnProperty1Existence,
-        scrapql.keys.processResult<Reporters, KeysResult, Key, KeyResult, Ctx<Id>>(
-          scrapql.leaf.processResult<Reporters, KeyResult, Ctx<Key, Ctx<Id>>>(
+        scrapql.keys.processResult<KeysResult, Ctx<Id>, Reporters, Key, KeyResult>(
+          scrapql.leaf.processResult<KeyResult, Ctx<Key, Ctx<Id>>, Reporters>(
             (r: Reporters) => r.receiveKeyResult,
           ),
         ),
       ),
       property2: scrapql.leaf.processResult((r: Reporters) => r.receiveProperty2Result),
       property3: scrapql.search.processResult<
-        Reporters,
         Property3Result,
+        Ctx0,
+        Reporters,
         Terms,
         Id,
-        KeysResult,
-        Ctx0,
-        Err1
+        KeysResult
       >(
         (r) => r.learnProperty3Match,
-        scrapql.keys.processResult<Reporters, KeysResult, Key, KeyResult, Ctx<Id>>(
-          scrapql.leaf.processResult<Reporters, KeyResult, Ctx<Key, Ctx<Id>>>(
+        scrapql.keys.processResult<KeysResult, Ctx<Id>, Reporters, Key, KeyResult>(
+          scrapql.leaf.processResult<KeyResult, Ctx<Key, Ctx<Id>>, Reporters>(
             (r: Reporters) => r.receiveKeyResult,
           ),
         ),
@@ -279,7 +271,7 @@ describe('result', () => {
     });
     const reporters = createReporters();
     const context: Ctx0 = ctx0;
-    const main = scrapql.processorInstance(processRoot, reporters, context)(rootResult);
+    const main = scrapql.processorInstance(processRoot, context, reporters)(rootResult);
     await ruins.fromTask(main);
     // eslint-disable-next-line fp/no-mutating-methods
     expect((reporters.learnProperty1Existence as any).mock.calls.sort()).toMatchObject([
