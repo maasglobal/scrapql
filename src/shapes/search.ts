@@ -41,7 +41,7 @@ import {
   TermsCodec,
   TermsQuery,
   TermsResult,
-  reduceeMismatch,
+  structuralMismatch,
   examples,
   protocol,
   termsQuery,
@@ -145,8 +145,8 @@ export const reduceResult = <T extends Terms, I extends Id, SR extends Result>(
   pipe(
     results,
     Dict_.mergeSymmetric(
-      () => reduceeMismatch,
-      Dict_.mergeSymmetric(() => reduceeMismatch, reduceSubResult),
+      () => structuralMismatch('terms'),
+      Dict_.mergeSymmetric(() => structuralMismatch('ids'), reduceSubResult),
     ),
   );
 

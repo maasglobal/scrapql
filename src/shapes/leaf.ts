@@ -18,6 +18,7 @@ import {
   Protocol,
   Query,
   QueryProcessor,
+  PayloadMismatch,
   ReduceFailure,
   ReporterConnector,
   Reporters,
@@ -66,7 +67,16 @@ export const reduceResult = <R extends LeafResult>(
 ) => (results: NonEmptyArray<R>): Either<ReduceFailure, R> => {
   const writeResult: R = NonEmptyArray_.head(results);
   const readResult: Array<R> = NonEmptyArray_.tail(results);
-  return pipe(readResult, Array_.reduce(writeResult, combineLeafResult), Either_.right);
+  const result: Either<PayloadMismatch, R> = pipe(
+    readResult,
+    Array_.reduce(Either_.right(writeResult), (ew, r) =>
+      pipe(
+        ew,
+        Either_.chain((w) => combineLeafResult(w, r)),
+      ),
+    ),
+  );
+  return result;
 };
 
 export function queryExamples<Q extends LeafQuery>(

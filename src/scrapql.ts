@@ -213,11 +213,31 @@ export type QueryProcessorMapping<
   [I in keyof Q & keyof R]: QueryProcessor<Required<Q>[I], Required<R>[I], E, C, A>;
 };
 
-const MISMATCH = 'Structural mismatch';
-export type ReduceeMismatch = typeof MISMATCH;
-export const reduceeMismatch: ReduceeMismatch = MISMATCH;
+type FailureDescription = string;
 
-export type ReduceFailure = ReduceeMismatch;
+const STRUCTURE = 'Unexpected structure';
+export type StructuralMismatch = {
+  reason: typeof STRUCTURE;
+  description: FailureDescription;
+};
+export const structuralMismatch = (
+  description: FailureDescription,
+): StructuralMismatch => ({
+  reason: STRUCTURE,
+  description,
+});
+
+const PAYLOAD = 'Unexpected payload';
+export type PayloadMismatch = {
+  reason: typeof PAYLOAD;
+  description: FailureDescription;
+};
+export const payloadMismatch = (description: FailureDescription): PayloadMismatch => ({
+  reason: PAYLOAD,
+  description,
+});
+
+export type ReduceFailure = StructuralMismatch | PayloadMismatch;
 
 export type ResultReducer<R extends Result> = (
   r: NonEmptyArray<R>,
@@ -225,7 +245,10 @@ export type ResultReducer<R extends Result> = (
 
 export type Failure = ReduceFailure;
 
-export type LeafResultCombiner<R extends Result> = (w: R, r: R) => R;
+export type LeafResultCombiner<R extends Result> = (
+  w: R,
+  r: R,
+) => Either<PayloadMismatch, R>;
 
 export type ResultReducerMapping<R extends PropertiesResult<any>> = {
   [I in keyof R]: ResultReducer<Required<R>[I]>;

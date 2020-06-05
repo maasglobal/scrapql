@@ -100,7 +100,7 @@ export const reduceResult = <R extends PropertiesResult>(
 ) => <P extends Property & keyof R>(
   results: NonEmptyArray<R>,
 ): Either<ReduceFailure, R> => {
-  const omg: Record<P, Either<ReduceFailure, R[P]>> = pipe(
+  const result: Either<ReduceFailure, Record<P, R[P]>> = pipe(
     NonEmptyArray_.head(results),
     Record_.mapWithIndex<P, unknown, Either<ReduceFailure, R[P]>>(
       (propName: P): Either<ReduceFailure, R[P]> => {
@@ -113,8 +113,8 @@ export const reduceResult = <R extends PropertiesResult>(
         );
       },
     ),
-  ) as Record<P, Either<ReduceFailure, R[P]>>;
-  const result: Either<ReduceFailure, Record<P, R[P]>> = Record_.sequence(either)(omg);
+    Record_.sequence(either),
+  );
   return result as Either<ReduceFailure, R>;
 };
 
