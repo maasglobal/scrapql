@@ -99,9 +99,9 @@ export const bundle = <
     Query: seed.Query,
     Result: seed.Result,
     Err: seed.Err,
-    processQuery: processQuery(seed.result),
+    processQuery: processQuery(seed.Result.value),
     processResult: processResult(),
     reduceResult,
-    queryExamples: queryExamples(seed.queryExamplesArray),
-    resultExamples: resultExamples(seed.resultExamplesArray),
+    queryExamples: queryExamples([seed.Query.value]),
+    resultExamples: resultExamples([seed.Result.value]),
   });

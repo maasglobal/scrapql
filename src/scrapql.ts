@@ -67,7 +67,7 @@ export type ExistenceQuery<Q extends Id = Id> = Q & {
 export const existenceQuery = <I extends Id = Id>(id: I): ExistenceQuery<I> =>
   id as ExistenceQuery<I>;
 
-export type LiteralQuery = Json;
+export type LiteralQuery = Json & string;
 export type LeafQuery = Json;
 export type KeysQuery<SQ extends Query = Json, K extends Key = Key> = Dict<K, SQ>;
 export type IdsQuery<SQ extends Query = Json, I extends Id = Id> = Dict<I, SQ>;
@@ -107,7 +107,7 @@ export const existenceResult = <R extends Existence>(existence: R): ExistenceRes
 export type TermsResult<I extends Id> = Array<I>;
 export const termsResult = <I extends Id>(ids: Array<I>): TermsResult<I> => ids;
 
-export type LiteralResult = Json;
+export type LiteralResult = Json & string;
 export type LeafResult = Json;
 export type KeysResult<SR extends Result = Json, K extends Key = Key> = Dict<K, SR>;
 export type IdsResult<SR extends Result = Json, I extends Id = Id> = Dict<I, Option<SR>>;
@@ -338,11 +338,8 @@ export type LiteralProtocolSeed<
   E extends Err
 > = {
   Err: ErrCodec<E>;
-  Query: QueryCodec<Q>;
-  Result: ResultCodec<R>;
-  result: R;
-  queryExamplesArray: NonEmptyArray<Q>;
-  resultExamplesArray: NonEmptyArray<R>;
+  Query: QueryCodec<Q> & t.LiteralC<Q>;
+  Result: ResultCodec<R> & t.LiteralC<R>;
 };
 
 export type LeafProtocolSeed<
