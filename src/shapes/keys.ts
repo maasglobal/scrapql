@@ -36,7 +36,7 @@ import {
   ResultReducer,
   examples,
   protocol,
-  reduceeMismatch,
+  structuralMismatch,
 } from '../scrapql';
 
 // keys query requests some information that is always present in database
@@ -99,7 +99,7 @@ export const reduceResult = <K extends Key, SR extends Result>(
   pipe(
     results,
     Dict_.mergeSymmetric(
-      () => reduceeMismatch,
+      () => structuralMismatch('key'),
       (subResultVariants: NonEmptyArray<SR>): Either<ReduceFailure, SR> =>
         reduceSubResult(subResultVariants),
     ),

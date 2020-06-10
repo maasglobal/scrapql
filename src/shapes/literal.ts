@@ -24,7 +24,7 @@ import {
   ResultProcessor,
   examples,
   protocol,
-  reduceeMismatch,
+  structuralMismatch,
 } from '../scrapql';
 
 // literal query contains static information that can be replaced with another literal
@@ -65,7 +65,7 @@ export const reduceResult = <L extends LiteralResult>(
           ma,
           Either_.chain((a) => {
             if (JSON.stringify(a) !== JSON.stringify(b)) {
-              return Either_.left(reduceeMismatch);
+              return Either_.left(structuralMismatch('literal'));
             }
             return Either_.right(a);
           }),

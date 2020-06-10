@@ -49,7 +49,7 @@ import {
   examples,
   existenceQuery,
   protocol,
-  reduceeMismatch,
+  structuralMismatch,
 } from '../scrapql';
 
 // ids query requests some information that may not be present in database
@@ -144,11 +144,11 @@ export const reduceResult = <I extends Id, SR extends Result>(
   pipe(
     results,
     Dict_.mergeSymmetric(
-      () => reduceeMismatch,
+      () => structuralMismatch('id'),
       (subResultVariants: NonEmptyArray<Option<SR>>): Either<ReduceFailure, Option<SR>> =>
         pipe(
           mergeOption(subResultVariants),
-          Either_.fromOption(() => reduceeMismatch),
+          Either_.fromOption(() => structuralMismatch('option')),
           Either_.chain(
             flow(
               nonEmptyArray.sequence(option),
