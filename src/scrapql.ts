@@ -24,10 +24,10 @@ export const dict = _dict;
 
 export type Json = unknown;
 
-export type Id = string;
-export type Key = string;
-export type Property = string;
-export type Err = Json;
+export type Id<I extends string> = I;
+export type Key<K extends string> = K;
+export type Property<P extends string> = P;
+export type Err<E extends Json> = E;
 
 export type Args<T extends any = any> = Array<T>;
 
@@ -59,42 +59,43 @@ export function ctx<N, A = never, B extends Onion<any, any> = Zero>(
   );
 }
 
-export type Context = Ctx<any, any> | Ctx0;
+// TODO: with TS4 tuple type Context<C extends Array<any>> = C
+export type Context = Onion<any, any> | Zero;
 
-export type ExistenceQuery<Q extends Id = Id> = Q & {
+export type ExistenceQuery<Q extends Id<any>> = Q & {
   readonly ExistenceQuery: unique symbol;
 };
-export const existenceQuery = <I extends Id = Id>(id: I): ExistenceQuery<I> =>
+export const existenceQuery = <I extends Id<any>>(id: I): ExistenceQuery<I> =>
   id as ExistenceQuery<I>;
 
-export type LiteralQuery = Json & string;
-export type LeafQuery = Json;
-export type KeysQuery<SQ extends Query = Json, K extends Key = Key> = Dict<K, SQ>;
-export type IdsQuery<SQ extends Query = Json, I extends Id = Id> = Dict<I, SQ>;
-export type SearchQuery<SQ extends Query = Json, T extends Terms = Terms> = Dict<T, SQ>;
+export type LiteralQuery<Q extends Json & string> = Q;
+export type LeafQuery<Q extends Json> = Q;
+export type KeysQuery<Q extends Dict<Key<any>, Query<any>>> = Q;
+export type IdsQuery<Q extends Dict<Id<any>, Query<any>>> = Q;
+export type SearchQuery<Q extends Dict<Terms<any>, Query<any>>> = Q;
 export type PropertiesQuery<
   Q extends {
-    [I in Property]: Query;
-  } = {
-    [I in Property]: Json;
+    [I in Property<any>]: Query<any>;
   }
 > = Partial<Q>;
-export type Terms = Json;
-export type TermsQuery<Q extends Terms> = Q & {
+export type Terms<T extends Json> = T;
+export type TermsQuery<Q extends Terms<any>> = Q & {
   readonly TermsQuery: unique symbol;
 };
-export const termsQuery = <T extends Terms>(terms: T): TermsQuery<T> =>
+export const termsQuery = <T extends Terms<any>>(terms: T): TermsQuery<T> =>
   terms as TermsQuery<T>;
 
-export type FetchableQuery = LeafQuery | ExistenceQuery<any>;
-export type StructuralQuery =
-  | LiteralQuery
-  | KeysQuery
-  | IdsQuery
-  | SearchQuery
-  | PropertiesQuery;
+export type FetchableQuery<Q extends LeafQuery<any> | ExistenceQuery<any>> = Q;
+export type StructuralQuery<
+  Q extends
+    | LiteralQuery<any>
+    | KeysQuery<any>
+    | IdsQuery<any>
+    | SearchQuery<any>
+    | PropertiesQuery<any>
+> = Q;
 
-export type Query = StructuralQuery | FetchableQuery;
+export type Query<Q extends StructuralQuery<any> | FetchableQuery<any>> = Q;
 
 export type Existence = boolean;
 
@@ -104,35 +105,35 @@ export type ExistenceResult<R extends Existence = Existence> = R & {
 export const existenceResult = <R extends Existence>(existence: R): ExistenceResult<R> =>
   existence as ExistenceResult<R>;
 
-export type TermsResult<I extends Id> = Array<I>;
-export const termsResult = <I extends Id>(ids: Array<I>): TermsResult<I> => ids;
+export type TermsResult<I extends Id<any>> = Array<I>;
+export const termsResult = <I extends Id<any>>(ids: Array<I>): TermsResult<I> => ids;
 
-export type LiteralResult = Json & string;
-export type LeafResult = Json;
-export type KeysResult<SR extends Result = Json, K extends Key = Key> = Dict<K, SR>;
-export type IdsResult<SR extends Result = Json, I extends Id = Id> = Dict<I, Option<SR>>;
-export type SearchResult<
-  SR extends Result = Json,
-  T extends Terms = Terms,
-  I extends Id = Id
-> = Dict<T, Dict<I, SR>>;
+export type LiteralResult<R extends Json & string> = R;
+export type LeafResult<R extends Json> = R;
+export type KeysResult<R extends Dict<Key<any>, Result<any>>> = R;
+export type IdsResult<R extends Dict<Id<any>, Option<Result<any>>>> = R;
+export type SearchResult<R extends Dict<Terms<any>, Dict<Id<any>, Result<any>>>> = R;
 export type PropertiesResult<
   R extends {
-    [I in Property]: Result;
-  } = {
-    [I in Property]: Json;
+    [I in Property<any>]: Result<any>;
   }
 > = Partial<R>;
 
-export type ReportableResult = LeafResult | ExistenceResult;
-export type StructuralResult =
-  | LiteralResult
-  | KeysResult
-  | IdsResult
-  | SearchResult
-  | PropertiesResult;
+export type ReportableResult<R extends LeafResult<any> | ExistenceResult<any>> = R;
+export type StructuralResult<
+  R extends
+    | LiteralResult<any>
+    | KeysResult<any>
+    | IdsResult<any>
+    | SearchResult<any>
+    | PropertiesResult<any>
+> = R;
 
-export type Result = StructuralResult | ReportableResult;
+export type Result<R extends StructuralResult<any> | ReportableResult<any>> = R;
+
+export type Handler<I, O, C extends Context> = (i: I, c: C) => Task<O>;
+
+export type API<A extends { [p: string]: Handler<any, any, any> }> = A;
 
 export type ProcessorInstance<I, O> = (i: I) => Task<O>;
 export const processorInstance = <I, O, C extends Context, A extends API<any>>(
@@ -142,73 +143,69 @@ export const processorInstance = <I, O, C extends Context, A extends API<any>>(
 ): ProcessorInstance<I, O> => (input: I) => processor(input)(context)(api);
 
 export type QueryProcessorInstance<
-  Q extends Query,
-  R extends Result,
-  E extends Err
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>
 > = ProcessorInstance<Q, Either<E, R>>;
-export type ResultProcessorInstance<R extends Result> = ProcessorInstance<R, void>;
+export type ResultProcessorInstance<R extends Result<any>> = ProcessorInstance<R, void>;
 
 export type Processor<I, O, C extends Context, A extends API<any>> = (
   i: I,
 ) => (c: C) => ReaderTask<A, O>;
 
+export type Reporter<R extends Result<any>, C extends Context> = Handler<R, void, C>;
+export type Reporters<A extends API<{ [p: string]: Reporter<any, any> }>> = A;
+
+export type Resolver<
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
+  C extends Context
+> = Handler<Q, Either<E, R>, C>;
+export type Resolvers<A extends API<{ [p: string]: Resolver<any, any, any, any> }>> = A;
+
 export type QueryProcessor<
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  A extends Resolvers
+  A extends Resolvers<any>
 > = Processor<Q, Either<E, R>, C, A>;
 
 export type ResultProcessor<
-  R extends Result,
+  R extends Result<any>,
   C extends Context,
-  A extends Reporters
+  A extends Reporters<any>
 > = Processor<R, void, C, A>;
 
-export type Handler<I, O, C extends Context> = (i: I, c: C) => Task<O>;
-
-export type API<T> = Record<string, T>;
-export type Resolvers = API<any>; // should be API<Resolver>
-export type Reporters = API<any>; // should be API<Reporter>
-
-export type Reporter<R extends Result, C extends Context> = Handler<R, void, C>;
-
 export type ReporterConnector<
-  R extends Result,
+  R extends Result<any>,
   C extends Context,
-  A extends Reporters
-> = (a: A) => Reporter<R, C>;
+  A extends Reporters<any>
+> = (a: A) => A[keyof A] & Reporter<R, C>;
 
 export type ResultProcessorMapping<
-  R extends PropertiesResult,
+  R extends PropertiesResult<any>,
   C extends Context,
-  A extends Reporters
+  A extends Reporters<any>
 > = {
   [I in keyof Required<R>]: ResultProcessor<Required<R>[I], C, A>;
 };
 
-export type Resolver<
-  Q extends Query,
-  R extends Result,
-  E extends Err,
-  C extends Context
-> = Handler<Q, Either<E, R>, C>;
-
 export type ResolverConnector<
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  A extends Resolvers
-> = (a: A) => Resolver<Q, R, E, C>;
+  A extends Resolvers<any>
+> = (a: A) => A[keyof A] & Resolver<Q, R, E, C>;
 
 export type QueryProcessorMapping<
-  Q extends PropertiesQuery,
-  R extends PropertiesResult,
-  E extends Err,
+  Q extends PropertiesQuery<any>,
+  R extends PropertiesResult<any>,
+  E extends Err<any>,
   C extends Context,
-  A extends Resolvers
+  A extends Resolvers<any>
 > = {
   [I in keyof Q & keyof R]: QueryProcessor<Required<Q>[I], Required<R>[I], E, C, A>;
 };
@@ -239,13 +236,13 @@ export const payloadMismatch = (description: FailureDescription): PayloadMismatc
 
 export type ReduceFailure = StructuralMismatch | PayloadMismatch;
 
-export type ResultReducer<R extends Result> = (
+export type ResultReducer<R extends Result<any>> = (
   r: NonEmptyArray<R>,
 ) => Either<ReduceFailure, R>;
 
 export type Failure = ReduceFailure;
 
-export type LeafResultCombiner<R extends Result> = (
+export type LeafResultCombiner<R extends Result<any>> = (
   w: R,
   r: R,
 ) => Either<PayloadMismatch, R>;
@@ -258,25 +255,33 @@ export type Constructor<T> = <I extends T>(i: I) => I;
 
 export type Codec<T> = t.Type<T, Json>;
 
-export type QueryCodec<Q extends Query> = Codec<Q>;
-export type ResultCodec<R extends Result> = Codec<R>;
-export type ErrCodec<E extends Err> = Codec<E>;
-export type KeyCodec<K extends Key> = Codec<K>;
-export type IdCodec<I extends Id> = Codec<I>;
-export type TermsCodec<T extends Terms> = Codec<T>;
+export type QueryCodec<Q extends Query<any>> = Codec<Q>;
+export type ResultCodec<R extends Result<any>> = Codec<R>;
+export type ErrCodec<E extends Err<any>> = Codec<E>;
+export type KeyCodec<K extends Key<any>> = Codec<K>;
+export type IdCodec<I extends Id<any>> = Codec<I>;
+export type TermsCodec<T extends Terms<any>> = Codec<T>;
 
-export type Codecs<Q extends Query, R extends Result, E extends Err> = {
+export type Codecs<Q extends Query<any>, R extends Result<any>, E extends Err<any>> = {
   Query: QueryCodec<Q>;
   Result: ResultCodec<R>;
   Err: ErrCodec<E>;
 };
 
-export type Constructors<Q extends Query, R extends Result, E extends Err> = {
+export type Constructors<
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>
+> = {
   query: Constructor<Q>;
   result: Constructor<R>;
   err: Constructor<E>;
 };
-export const constructors = <Q extends Query, R extends Result, E extends Err>(
+export const constructors = <
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>
+>(
   _codecs: Codecs<Q, R, E>,
 ): Constructors<Q, R, E> => ({
   query: (q) => q,
@@ -287,67 +292,77 @@ export const constructors = <Q extends Query, R extends Result, E extends Err>(
 export type Examples<A> = NEGenF<A>;
 export const examples = neGenF;
 
-export type QueryExamplesMapping<Q extends PropertiesQuery<any>> = {
+export type QueryExamplesMapping<
+  P extends Property<string>,
+  Q extends PropertiesQuery<{ [I in P]: Query<any> }>
+> = {
   [I in keyof Q]: Examples<Required<Q>[I]>;
 };
-export type ResultExamplesMapping<R extends PropertiesResult<any>> = {
+export type ResultExamplesMapping<
+  P extends Property<string>,
+  R extends PropertiesResult<{ [I in P]: Result<any> }>
+> = {
   [I in keyof R]: Examples<Required<R>[I]>;
 };
 
-export type ExampleCatalog<Q extends Query, R extends Result> = {
+export type ExampleCatalog<Q extends Query<any>, R extends Result<any>> = {
   queryExamples: Examples<Q>;
   resultExamples: Examples<R>;
 };
 
 export type QueryUtils<
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers
+  QA extends Resolvers<any>
 > = {
   processQuery: QueryProcessor<Q, R, E, C, QA>;
 };
 
-export type ResultUtils<R extends Result, C extends Context, RA extends Reporters> = {
+export type ResultUtils<
+  R extends Result<any>,
+  C extends Context,
+  RA extends Reporters<any>
+> = {
   processResult: ResultProcessor<R, C, RA>;
   reduceResult: ResultReducer<R>;
 };
 
 export type Fundamentals<
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>
 > = QueryUtils<Q, R, E, C, QA> &
   ResultUtils<R, C, RA> &
   Codecs<Q, R, E> &
   ExampleCatalog<Q, R>;
 
-export type Conveniences<Q extends Query, R extends Result, E extends Err> = Constructors<
-  Q,
-  R,
-  E
->;
+export type Conveniences<
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>
+> = Constructors<Q, R, E>;
 
 export type Protocol<
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>
 > = Fundamentals<Q, R, E, C, QA, RA> & Conveniences<Q, R, E>;
 
 export const protocol = <
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>
 >(
   fundamentals: Fundamentals<Q, R, E, C, QA, RA>,
 ): Protocol<Q, R, E, C, QA, RA> => ({
@@ -356,9 +371,9 @@ export const protocol = <
 });
 
 export type LiteralProtocolSeed<
-  Q extends LiteralQuery,
-  R extends LiteralResult,
-  E extends Err
+  Q extends LiteralQuery<string>,
+  R extends LiteralResult<string>,
+  E extends Err<any>
 > = {
   Err: ErrCodec<E>;
   Query: QueryCodec<Q> & t.LiteralC<Q>;
@@ -366,12 +381,12 @@ export type LiteralProtocolSeed<
 };
 
 export type LeafProtocolSeed<
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>
 > = {
   Err: ErrCodec<E>;
   Query: QueryCodec<Q>;
