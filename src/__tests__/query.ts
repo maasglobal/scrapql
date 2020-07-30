@@ -37,15 +37,18 @@ function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R
 describe('query', () => {
   /* eslint-disable @typescript-eslint/no-use-before-define */
 
-  type Resolvers = {
+  type Resolvers = scrapql.Resolvers<{
     checkProperty1Existence: (q: Id) => TaskEither<Err1, scrapql.Existence>;
     resolveProperty3Terms: (q: Terms) => TaskEither<Err1, Array<Id>>;
-    fetchKeyResult: (q: KeyQuery, c: Ctx<Key, Ctx<Id>>) => TaskEither<Err1, KeyResult>;
+    fetchKeyResult: (
+      q: KeyQueryPayload,
+      c: Ctx<Key, Ctx<Id>>,
+    ) => TaskEither<Err1, KeyResultPayload>;
     fetchProperty2Result: (
-      q: Property2Query,
+      q: Property2QueryPayload,
       c: Ctx0,
-    ) => TaskEither<Err1, Property2Result>;
-  };
+    ) => TaskEither<Err1, Property2ResultPayload>;
+  }>;
 
   function createResolvers(): Resolvers {
     return {
@@ -76,10 +79,14 @@ describe('query', () => {
         ),
       ),
       fetchKeyResult: loggerTask(
-        jest.fn((_0: KeyQuery, _1: Ctx<Key, Ctx<Id>>) => Either_.right(key1Result)),
+        jest.fn((_0: KeyQueryPayload, _1: Ctx<Key, Ctx<Id>>) =>
+          Either_.right(keyResultPayload),
+        ),
       ),
       fetchProperty2Result: loggerTask(
-        jest.fn((_0: Property2Query, _1: Ctx0) => Either_.right(property2Result)),
+        jest.fn((_0: Property2QueryPayload, _1: Ctx0) =>
+          Either_.right(property2ResultPayload),
+        ),
       ),
     };
   }
@@ -114,10 +121,16 @@ describe('query', () => {
   type Key = string;
   const key1: Key = 'key1';
 
-  type KeyResult = string;
-  type KeyQuery = string;
-  const key1Result: KeyResult = 'result1';
-  const key1Query: KeyQuery = 'query1';
+  type KeyQueryPayload = string;
+  const keyQueryPayload: KeyQueryPayload = 'query1';
+
+  type KeyResultPayload = string;
+  const keyResultPayload: KeyResultPayload = 'result1';
+
+  type KeyResult = scrapql.LeafResult<KeyQueryPayload, KeyResultPayload>;
+  type KeyQuery = scrapql.LeafQuery<KeyQueryPayload>;
+  const key1Result: KeyResult = { q: keyQueryPayload, r: keyResultPayload };
+  const key1Query: KeyQuery = { q: keyQueryPayload };
   const processKey: CustomQP<
     KeyQuery,
     KeyResult,
@@ -131,7 +144,7 @@ describe('query', () => {
     const result = await ruins.fromTaskEither(main);
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
-      [key1Query, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
     ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(key1Result);
@@ -152,7 +165,7 @@ describe('query', () => {
     const result = await ruins.fromTaskEither(main);
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
-      [key1Query, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
     ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(keysResult);
@@ -189,16 +202,28 @@ describe('query', () => {
       ctx(id2),
     ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
-      [key1Query, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
     ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(property1Result);
   });
 
-  type Property2Result = string;
-  type Property2Query = string;
-  const property2Result: Property2Result = 'result2';
-  const property2Query: Property2Query = 'query2';
+  type Property2QueryPayload = string;
+  const property2QueryPayload: Property2QueryPayload = 'query1';
+
+  type Property2ResultPayload = string;
+  const property2ResultPayload: Property2ResultPayload = 'result1';
+
+  type Property2Result = scrapql.LeafResult<
+    Property2QueryPayload,
+    Property2ResultPayload
+  >;
+  type Property2Query = scrapql.LeafQuery<Property2QueryPayload>;
+  const property2Result: Property2Result = {
+    q: property2QueryPayload,
+    r: property2ResultPayload,
+  };
+  const property2Query: Property2Query = { q: property2QueryPayload };
   const processProperty2: CustomQP<
     Property2Query,
     Property2Result,
@@ -217,7 +242,7 @@ describe('query', () => {
     expect((resolvers.checkProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([
-      [property2Query, ctx0],
+      [property2QueryPayload, ctx0],
     ]);
     expect(result).toEqual(property2Result);
   });
@@ -246,30 +271,30 @@ describe('query', () => {
       [terms, []],
     ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
-      [key1Query, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
     ]);
     expect(result).toEqual(property3Result);
   });
 
   type RootResult = Partial<{
-    protocol: typeof RESULT;
+    protocol: scrapql.LiteralResult<typeof QUERY, typeof RESULT>;
     property1: Property1Result;
     property2: Property2Result;
     property3: Property3Result;
   }>;
   type RootQuery = Partial<{
-    protocol: typeof QUERY;
+    protocol: scrapql.LiteralQuery<typeof QUERY>;
     property1: Property1Query;
     property2: Property2Query;
     property3: Property3Query;
   }>;
   const rootResult: RootResult = {
-    protocol: RESULT,
+    protocol: { q: QUERY, r: RESULT },
     property1: property1Result,
     property3: property3Result,
   };
   const rootQuery: RootQuery = {
-    protocol: QUERY,
+    protocol: { q: QUERY },
     property1: property1Query,
     property3: property3Query,
   };
@@ -300,8 +325,8 @@ describe('query', () => {
       [terms, []],
     ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
-      [key1Query, ctx(key1, ctx(id1))],
-      [key1Query, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
     ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(rootResult);
@@ -356,8 +381,8 @@ describe('query', () => {
       [terms, []],
     ]);
     expect((resolvers.fetchKeyResult as any).mock.calls).toMatchObject([
-      [key1Query, ctx(key1, ctx(id1))],
-      [key1Query, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
+      [keyQueryPayload, ctx(key1, ctx(id1))],
     ]);
     expect((resolvers.fetchProperty2Result as any).mock.calls).toMatchObject([]);
     expect(result).toEqual(rootResult);

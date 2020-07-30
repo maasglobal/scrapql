@@ -22,10 +22,10 @@ import {
   Err,
   Examples,
   Key,
-  KeyCodec,
+  KeysBundle,
+  KeysBundleSeed,
   KeysQuery,
   KeysResult,
-  Protocol,
   Query,
   QueryProcessor,
   ReduceFailure,
@@ -126,24 +126,26 @@ export function resultExamples<K extends Key<any>, SR extends Result<any>>(
 }
 
 export const bundle = <
-  Q extends Query<any>,
-  R extends Result<any>,
   E extends Err<any>,
   C extends Context,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
-  K extends Key<any>
+  K extends Key<any>,
+  SQ extends Query<any>,
+  SR extends Result<any>
 >(
-  key: { Key: KeyCodec<K>; keyExamples: NonEmptyArray<K> },
-  item: Protocol<Q, R, E, Prepend<K, C>, QA, RA>,
-): Protocol<KeysQuery<Dict<K, Q>>, KeysResult<Dict<K, R>>, E, C, QA, RA> =>
+  seed: KeysBundleSeed<E, C, QA, RA, K, SQ, SR>,
+): KeysBundle<E, C, QA, RA, K, SQ, SR> =>
   protocol({
-    Query: Dict(key.Key, item.Query),
-    Result: Dict(key.Key, item.Result),
-    Err: item.Err,
-    processQuery: processQuery(item.processQuery),
-    processResult: processResult(item.processResult),
-    reduceResult: reduceResult(item.reduceResult),
-    queryExamples: queryExamples(examples(key.keyExamples), item.queryExamples),
-    resultExamples: resultExamples(examples(key.keyExamples), item.resultExamples),
+    Query: Dict(seed.key.Key, seed.item.Query),
+    Result: Dict(seed.key.Key, seed.item.Result),
+    Err: seed.item.Err,
+    processQuery: processQuery(seed.item.processQuery),
+    processResult: processResult(seed.item.processResult),
+    reduceResult: reduceResult(seed.item.reduceResult),
+    queryExamples: queryExamples(examples(seed.key.keyExamples), seed.item.queryExamples),
+    resultExamples: resultExamples(
+      examples(seed.key.keyExamples),
+      seed.item.resultExamples,
+    ),
   });

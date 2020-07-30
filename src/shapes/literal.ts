@@ -1,3 +1,4 @@
+import * as t from 'io-ts';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Either_ from 'fp-ts/lib/Either';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
@@ -13,10 +14,12 @@ import {
   Context,
   Err,
   Examples,
-  LiteralProtocolSeed,
+  LiteralBundle,
+  LiteralBundleSeed,
   LiteralQuery,
+  LiteralQueryPayload,
   LiteralResult,
-  Protocol,
+  LiteralResultPayload,
   QueryProcessor,
   ReduceFailure,
   Reporters,
@@ -30,21 +33,22 @@ import {
 // literal query contains static information that can be replaced with another literal
 
 export function processQuery<
-  Q extends LiteralQuery<any>,
+  Q extends LiteralQuery<QP>,
   E extends Err<any>,
   C extends Context,
   A extends Resolvers<any>,
-  R extends LiteralResult<any>
->(constant: R): QueryProcessor<Q, R, E, C, A> {
-  return (_query: Q) => (_context: C): ReaderTaskEither<A, E, R> => {
-    return (_resolvers) => TaskEither_.right(constant);
+  QP extends LiteralQueryPayload<string>,
+  RP extends LiteralResultPayload<string>
+>(r: RP): QueryProcessor<Q, LiteralResult<QP, RP>, E, C, A> {
+  return ({ q }: Q) => (_context: C): ReaderTaskEither<A, E, LiteralResult<QP, RP>> => {
+    return (_resolvers) => TaskEither_.right({ q, r });
   };
 }
 
 // literal result is known on forehand so we throw it away
 
 export function processResult<
-  R extends LiteralResult<any>,
+  R extends LiteralResult<any, any>,
   C extends Context,
   A extends Reporters<any>
 >(): ResultProcessor<R, C, A> {
@@ -53,7 +57,7 @@ export function processResult<
   };
 }
 
-export const reduceResult = <L extends LiteralResult<any>>(
+export const reduceResult = <L extends LiteralResult<any, any>>(
   results: NonEmptyArray<L>,
 ): Either<ReduceFailure, L> =>
   pipe(
@@ -79,29 +83,31 @@ export function queryExamples<Q extends LiteralQuery<any>>(
   return examples(queries);
 }
 
-export function resultExamples<R extends LiteralResult<any>>(
+export function resultExamples<R extends LiteralResult<any, any>>(
   results: NonEmptyArray<R>,
 ): Examples<R> {
   return examples(results);
 }
 
 export const bundle = <
-  Q extends LiteralQuery<string>,
-  R extends LiteralResult<string>,
   E extends Err<any>,
   C extends Context,
   QA extends Resolvers<any>,
-  RA extends Reporters<any>
+  RA extends Reporters<any>,
+  QP extends LiteralQueryPayload<string>,
+  RP extends LiteralResultPayload<string>
 >(
-  seed: LiteralProtocolSeed<Q, R, E>,
-): Protocol<Q, R, E, C, QA, RA> =>
+  seed: LiteralBundleSeed<E, QP, RP>,
+): LiteralBundle<E, C, QA, RA, QP, RP> =>
   protocol({
-    Query: seed.Query,
-    Result: seed.Result,
+    Query: t.type({ q: seed.QueryPayload }),
+    Result: t.type({ q: seed.QueryPayload, r: seed.ResultPayload }),
     Err: seed.Err,
-    processQuery: processQuery(seed.Result.value),
+    processQuery: processQuery(seed.ResultPayload.value),
     processResult: processResult(),
     reduceResult,
-    queryExamples: queryExamples([seed.Query.value]),
-    resultExamples: resultExamples([seed.Result.value]),
+    queryExamples: queryExamples([{ q: seed.QueryPayload.value }]),
+    resultExamples: resultExamples([
+      { q: seed.QueryPayload.value, r: seed.ResultPayload.value },
+    ]),
   });

@@ -17,14 +17,16 @@ import { pipe } from 'fp-ts/lib/pipeable';
 import * as NonEmptyList_ from '../utils/non-empty-list';
 
 import {
+  BundleMapping,
   Context,
   Err,
   ErrCodec,
   Examples,
+  PropertiesBundle,
+  PropertiesBundleSeed,
   PropertiesQuery,
   PropertiesResult,
   Property,
-  Protocol,
   Query,
   QueryExamplesMapping,
   QueryProcessor,
@@ -134,24 +136,9 @@ export function resultExamples<
   return NonEmptyList_.sequenceS(subResults) as Examples<R>;
 }
 
-export const bundle = <O extends Record<string, Protocol<any, any, any, any, any, any>>>(
-  subProtocols: O,
-): Protocol<
-  PropertiesQuery<
-    {
-      [P in keyof O]: O[P] extends Protocol<infer Q, any, any, any, any, any> ? Q : never;
-    }
-  >,
-  PropertiesResult<
-    {
-      [P in keyof O]: O[P] extends Protocol<any, infer R, any, any, any, any> ? R : never;
-    }
-  >,
-  O extends Record<any, Protocol<any, any, infer E, any, any, any>> ? E : never,
-  O extends Record<any, Protocol<any, any, any, infer C, any, any>> ? C : never,
-  O extends Record<any, Protocol<any, any, any, any, infer QA, any>> ? QA : never,
-  O extends Record<any, Protocol<any, any, any, any, any, infer RA>> ? RA : never
-> =>
+export const bundle = <O extends BundleMapping<any, any>>(
+  subProtocols: PropertiesBundleSeed<O>,
+): PropertiesBundle<O> =>
   protocol({
     Query: t.partial(
       pipe(

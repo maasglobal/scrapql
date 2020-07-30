@@ -30,24 +30,22 @@ import {
   Err,
   Examples,
   Existence,
-  ExistenceQuery,
+  ExistenceReporterConnector,
+  ExistenceResolverConnector,
   Id,
-  IdCodec,
+  IdsBundle,
+  IdsBundleSeed,
   IdsQuery,
   IdsResult,
-  Protocol,
   Query,
   QueryProcessor,
   ReduceFailure,
-  ReporterConnector,
   Reporters,
-  ResolverConnector,
   Resolvers,
   Result,
   ResultProcessor,
   ResultReducer,
   examples,
-  existenceQuery,
   protocol,
   structuralMismatch,
 } from '../scrapql';
@@ -63,7 +61,7 @@ export function processQuery<
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  connect: ResolverConnector<ExistenceQuery<I>, Existence, E, C, A>,
+  connect: ExistenceResolverConnector<I, Existence, E, C, A>,
   subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, A>,
 ): QueryProcessor<Q, IdsResult<Dict<I, Option<SR>>>, E, C, A> {
   return (query: Q) => (
@@ -77,7 +75,7 @@ export function processQuery<
             const subContext = pipe(context, Context_.prepend(id));
             const existenceCheck = connect(resolvers);
             return pipe(
-              existenceCheck(existenceQuery(id), context),
+              existenceCheck(id, context),
               TaskEither_.chain(
                 (exists: Existence): TaskEither<E, Option<SR>> =>
                   pipe(
@@ -110,7 +108,7 @@ export function processResult<
   I extends Id<any>,
   SR extends Result<any>
 >(
-  connect: ReporterConnector<Existence, Prepend<I, C>, A>,
+  connect: ExistenceReporterConnector<I, Existence, C, A>,
   subProcessor: ResultProcessor<SR, Prepend<I, C>, A>,
 ): ResultProcessor<R, C, A> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
@@ -184,26 +182,26 @@ export function resultExamples<I extends Id<any>, SR extends Result<any>>(
 }
 
 export const bundle = <
-  Q extends Query<any>,
-  R extends Result<any>,
   E extends Err<any>,
   C extends Context,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
-  I extends Id<any>
+  I extends Id<any>,
+  SQ extends Query<any>,
+  SR extends Result<any>
 >(
-  id: { Id: IdCodec<I>; idExamples: NonEmptyArray<I> },
-  item: Protocol<Q, R, E, Prepend<I, C>, QA, RA>,
-  queryConnector: ResolverConnector<ExistenceQuery<I>, Existence, E, C, QA>,
-  resultConnector: ReporterConnector<Existence, Prepend<I, C>, RA>,
-): Protocol<IdsQuery<Dict<I, Q>>, IdsResult<Dict<I, Option<R>>>, E, C, QA, RA> =>
+  seed: IdsBundleSeed<E, C, QA, RA, I, SQ, SR>,
+): IdsBundle<E, C, QA, RA, I, SQ, SR> =>
   protocol({
-    Query: Dict(id.Id, item.Query),
-    Result: Dict(id.Id, tOption(item.Result)),
-    Err: item.Err,
-    processQuery: processQuery(queryConnector, item.processQuery),
-    processResult: processResult(resultConnector, item.processResult),
-    reduceResult: reduceResult(item.reduceResult),
-    queryExamples: queryExamples(examples(id.idExamples), item.queryExamples),
-    resultExamples: resultExamples(examples(id.idExamples), item.resultExamples),
+    Query: Dict(seed.id.Id, seed.item.Query),
+    Result: Dict(seed.id.Id, tOption(seed.item.Result)),
+    Err: seed.item.Err,
+    processQuery: processQuery(seed.queryConnector, seed.item.processQuery),
+    processResult: processResult(seed.resultConnector, seed.item.processResult),
+    reduceResult: reduceResult(seed.item.reduceResult),
+    queryExamples: queryExamples(examples(seed.id.idExamples), seed.item.queryExamples),
+    resultExamples: resultExamples(
+      examples(seed.id.idExamples),
+      seed.item.resultExamples,
+    ),
   });
