@@ -42,17 +42,17 @@ import {
 // keys query requests some information that is always present in database
 
 export function processQuery<
-  Q extends KeysQuery<SQ, K>,
-  E extends Err,
+  Q extends KeysQuery<Dict<K, SQ>>,
+  E extends Err<any>,
   C extends Context,
-  A extends Resolvers,
-  K extends Key,
-  SQ extends Query,
-  SR extends Result
+  A extends Resolvers<any>,
+  K extends Key<any>,
+  SQ extends Query<any>,
+  SR extends Result<any>
 >(
   subProcessor: QueryProcessor<SQ, SR, E, Prepend<K, C>, A>,
-): QueryProcessor<Q, KeysResult<SR, K>, E, C, A> {
-  return (query: Q) => (context: C): ReaderTaskEither<A, E, KeysResult<SR, K>> => {
+): QueryProcessor<Q, KeysResult<Dict<K, SR>>, E, C, A> {
+  return (query: Q) => (context: C): ReaderTaskEither<A, E, KeysResult<Dict<K, SR>>> => {
     return (resolvers) =>
       pipe(
         query,
@@ -70,11 +70,11 @@ export function processQuery<
 // keys result contains data that always exists in database
 
 export function processResult<
-  R extends KeysResult<SR, K>,
+  R extends KeysResult<Dict<K, SR>>,
   C extends Context,
-  A extends Reporters,
-  K extends Key,
-  SR extends Result
+  A extends Reporters<any>,
+  K extends Key<any>,
+  SR extends Result<any>
 >(subProcessor: ResultProcessor<SR, Prepend<K, C>, A>): ResultProcessor<R, C, A> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters): Task<void> => {
@@ -91,11 +91,9 @@ export function processResult<
   };
 }
 
-export const reduceResult = <K extends Key, SR extends Result>(
+export const reduceResult = <K extends Key<any>, SR extends Result<any>>(
   reduceSubResult: ResultReducer<SR>,
-) => (
-  results: NonEmptyArray<KeysResult<SR, K>>,
-): Either<ReduceFailure, KeysResult<SR, K>> =>
+): ResultReducer<KeysResult<Dict<K, SR>>> => (results) =>
   pipe(
     results,
     Dict_.mergeSymmetric(
@@ -105,38 +103,40 @@ export const reduceResult = <K extends Key, SR extends Result>(
     ),
   );
 
-export function queryExamples<K extends Key, SQ extends Query>(
+export function queryExamples<K extends Key<any>, SQ extends Query<any>>(
   keys: Examples<K>,
   subQueries: Examples<SQ>,
-): Examples<KeysQuery<SQ, K>> {
+): Examples<KeysQuery<Dict<K, SQ>>> {
   return pipe(
     NEGenF_.sequenceT(keys, subQueries),
     NEGenF_.map(([key, subQuery]) => Dict_.dict([key, subQuery])),
   );
 }
 
-export function resultExamples<K extends Key, SR extends Result>(
+export function resultExamples<K extends Key<any>, SR extends Result<any>>(
   keys: Examples<K>,
   subResults: Examples<SR>,
-): Examples<KeysResult<SR, K>> {
+): Examples<KeysResult<Dict<K, SR>>> {
   return pipe(
     NEGenF_.sequenceT(keys, subResults),
-    NEGenF_.map(([key, subResult]): KeysResult<SR, K> => Dict_.dict([key, subResult])),
+    NEGenF_.map(
+      ([key, subResult]): KeysResult<Dict<K, SR>> => Dict_.dict([key, subResult]),
+    ),
   );
 }
 
 export const bundle = <
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters,
-  K extends Key
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>,
+  K extends Key<any>
 >(
   key: { Key: KeyCodec<K>; keyExamples: NonEmptyArray<K> },
   item: Protocol<Q, R, E, Prepend<K, C>, QA, RA>,
-): Protocol<KeysQuery<Q, K>, KeysResult<R, K>, E, C, QA, RA> =>
+): Protocol<KeysQuery<Dict<K, Q>>, KeysResult<Dict<K, R>>, E, C, QA, RA> =>
   protocol({
     Query: Dict(key.Key, item.Query),
     Result: Dict(key.Key, item.Result),

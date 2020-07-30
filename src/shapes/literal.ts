@@ -30,11 +30,11 @@ import {
 // literal query contains static information that can be replaced with another literal
 
 export function processQuery<
-  Q extends LiteralQuery,
-  E extends Err,
+  Q extends LiteralQuery<any>,
+  E extends Err<any>,
   C extends Context,
-  A extends Resolvers,
-  R extends LiteralResult
+  A extends Resolvers<any>,
+  R extends LiteralResult<any>
 >(constant: R): QueryProcessor<Q, R, E, C, A> {
   return (_query: Q) => (_context: C): ReaderTaskEither<A, E, R> => {
     return (_resolvers) => TaskEither_.right(constant);
@@ -44,16 +44,16 @@ export function processQuery<
 // literal result is known on forehand so we throw it away
 
 export function processResult<
-  R extends LiteralResult,
+  R extends LiteralResult<any>,
   C extends Context,
-  A extends Reporters
+  A extends Reporters<any>
 >(): ResultProcessor<R, C, A> {
   return (_result: R) => (_context: C): ReaderTask<A, void> => {
     return (_reporters) => Task_.of(undefined);
   };
 }
 
-export const reduceResult = <L extends LiteralResult>(
+export const reduceResult = <L extends LiteralResult<any>>(
   results: NonEmptyArray<L>,
 ): Either<ReduceFailure, L> =>
   pipe(
@@ -73,25 +73,25 @@ export const reduceResult = <L extends LiteralResult>(
     ),
   );
 
-export function queryExamples<Q extends LiteralQuery>(
+export function queryExamples<Q extends LiteralQuery<any>>(
   queries: NonEmptyArray<Q>,
 ): Examples<Q> {
   return examples(queries);
 }
 
-export function resultExamples<R extends LiteralResult>(
+export function resultExamples<R extends LiteralResult<any>>(
   results: NonEmptyArray<R>,
 ): Examples<R> {
   return examples(results);
 }
 
 export const bundle = <
-  Q extends LiteralQuery,
-  R extends LiteralResult,
-  E extends Err,
+  Q extends LiteralQuery<string>,
+  R extends LiteralResult<string>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>
 >(
   seed: LiteralProtocolSeed<Q, R, E>,
 ): Protocol<Q, R, E, C, QA, RA> =>

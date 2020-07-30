@@ -1592,10 +1592,10 @@ form-data@~2.3.2:
     combined-stream "^1.0.6"
     mime-types "^2.1.12"
 
-fp-ts@^2.6.2:
-  version "2.6.2"
-  resolved "https://registry.yarnpkg.com/fp-ts/-/fp-ts-2.6.2.tgz#0115221e223e0e4a1d08d93c0ebaee9241688cd1"
-  integrity sha512-RUm0iNcD7eMFZo6W1K10kqi0DyYX06lbbjyNgKwEWg1kPZw91ZXlkEx/9cII1x/jY4fHzh14+Hquk5sJnXBzQA==
+fp-ts@^2.7.1:
+  version "2.7.1"
+  resolved "https://registry.yarnpkg.com/fp-ts/-/fp-ts-2.7.1.tgz#7bd754f3362f4b9bc4d272a97c0658e9a1bc16bc"
+  integrity sha512-rYy41jF1gVhBNYbPwup50dtyT686OKOoa86PXwh8aKpBRfmvPhnBh2zUkOYj84GIMSCsgY+oJ/RVhVKRvWNPTA==
 
 fragment-cache@^0.2.1:
   version "0.2.1"
@@ -1866,20 +1866,20 @@ invariant@^2.2.4:
   dependencies:
     loose-envify "^1.0.0"
 
-io-ts-types@^0.5.3:
-  version "0.5.6"
-  resolved "https://registry.yarnpkg.com/io-ts-types/-/io-ts-types-0.5.6.tgz#4d9afdf7220d865c5bf74f30d9b2fcf1d51f11e3"
-  integrity sha512-E8mClvIN6sotGqICJQMyt8nMG9VkwejRYwOcKjAj5hndlWib9o8MRmP3HiyVK4Mn1lrpY6bB/B3LrMcV/HcWGQ==
+io-ts-types@^0.5.8:
+  version "0.5.8"
+  resolved "https://registry.yarnpkg.com/io-ts-types/-/io-ts-types-0.5.8.tgz#b08b6a730fde67fac93f7e511c7e6c479bfbd5e1"
+  integrity sha512-l4ffAX6AskEqoC/KnL+f2aczstbKumi/GBTxcaerBLjzoeZ24og0Xe/aUT9SdfKnJcz7sZlhmGWl2F7A0imOnw==
 
 io-ts-validator@^0.0.2:
   version "0.0.2"
   resolved "https://registry.yarnpkg.com/io-ts-validator/-/io-ts-validator-0.0.2.tgz#f09f410cede6c2e5f85ce413d700d3c797f59c10"
   integrity sha512-Udd62OMFGiRZxM9WNUIGYxVtyAsbqpAIu1b43W2x/ciItrmDb7JsSQmaHcDkpqshaA4SOe+cE2uoUfLJKK+WIA==
 
-io-ts@^2.2.4:
-  version "2.2.4"
-  resolved "https://registry.yarnpkg.com/io-ts/-/io-ts-2.2.4.tgz#c9b5390b8c60b9976ad03f670a6b976fe50d4083"
-  integrity sha512-a8A/3jekTgSPfQ+OG40sTiX2gohXZz89X1+TfKsWJ/vpA2dBilBkrGYPiDE8OaKMMG7xm5ma3SAZL5eNr4Bi2w==
+io-ts@^2.2.9:
+  version "2.2.9"
+  resolved "https://registry.yarnpkg.com/io-ts/-/io-ts-2.2.9.tgz#9a427512926462f20415099917a31dbf409ff2b0"
+  integrity sha512-Q9ob1VnpwyNoMam/BO6hm2dF4uu+to8NWSZNsRW6Q2Ni38PadgLZSQDo0hW7CJFgpJkQw4BXGwXzjr7c47c+fw==
 
 is-accessor-descriptor@^0.1.6:
   version "0.1.6"
@@ -3966,10 +3966,10 @@ type-fest@^0.8.1:
   resolved "https://registry.yarnpkg.com/type-fest/-/type-fest-0.8.1.tgz#09e249ebde851d3b1e48d27c105444667f17b83d"
   integrity sha512-4dbzIzqvjtgiM5rw1k5rEHtBANKmdudhGyBEajN01fEyhaAIhsoKNy6y7+IN93IfpFtwY9iqi7kD+xwKhQsNJA==
 
-typescript@^3.9.3:
-  version "3.9.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.3.tgz#d3ac8883a97c26139e42df5e93eeece33d610b8a"
-  integrity sha512-D/wqnB2xzNFIcoBG9FG8cXRDjiqSTbG2wd8DMZeQyJlP1vfTkIxH4GKveWaEBYySKIg+USu+E+EDIR47SqnaMQ==
+typescript@^3.9.7:
+  version "3.9.7"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.7.tgz#98d600a5ebdc38f40cb277522f12dc800e9e25fa"
+  integrity sha512-BLbiRkiBzAwsjut4x/dsibSTB6yWpwT5qWmC2OfuCg3GgVQCSgMs4vEctYPhsaGtd0AeuuHMkjZ2h2WG8MSzRw==
 
 union-value@^1.0.0:
   version "1.0.1"

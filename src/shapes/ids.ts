@@ -55,18 +55,20 @@ import {
 // ids query requests some information that may not be present in database
 
 export function processQuery<
-  Q extends IdsQuery<SQ, I>,
-  E extends Err,
+  Q extends IdsQuery<Dict<I, SQ>>,
+  E extends Err<any>,
   C extends Context,
-  A extends Resolvers,
-  I extends Id,
-  SQ extends Query,
-  SR extends Result
+  A extends Resolvers<any>,
+  I extends Id<any>,
+  SQ extends Query<any>,
+  SR extends Result<any>
 >(
   connect: ResolverConnector<ExistenceQuery<I>, Existence, E, C, A>,
   subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, A>,
-): QueryProcessor<Q, IdsResult<SR, I>, E, C, A> {
-  return (query: Q) => (context: C): ReaderTaskEither<A, E, IdsResult<SR, I>> => {
+): QueryProcessor<Q, IdsResult<Dict<I, Option<SR>>>, E, C, A> {
+  return (query: Q) => (
+    context: C,
+  ): ReaderTaskEither<A, E, IdsResult<Dict<I, Option<SR>>>> => {
     return (resolvers) => {
       const tasks: Dict<I, TaskEither<E, Option<SR>>> = pipe(
         query,
@@ -102,11 +104,11 @@ export function processQuery<
 // ids result contains data that may not exist in database
 
 export function processResult<
-  R extends IdsResult<SR, I>,
+  R extends IdsResult<Dict<I, Option<SR>>>,
   C extends Context,
-  A extends Reporters,
-  I extends Id,
-  SR extends Result
+  A extends Reporters<any>,
+  I extends Id<any>,
+  SR extends Result<any>
 >(
   connect: ReporterConnector<Existence, Prepend<I, C>, A>,
   subProcessor: ResultProcessor<SR, Prepend<I, C>, A>,
@@ -136,11 +138,9 @@ export function processResult<
   };
 }
 
-export const reduceResult = <I extends Id, SR extends Result>(
+export const reduceResult = <I extends Id<any>, SR extends Result<any>>(
   reduceSubResult: ResultReducer<SR>,
-) => (
-  results: NonEmptyArray<IdsResult<SR, I>>,
-): Either<ReduceFailure, IdsResult<SR, I>> =>
+): ResultReducer<IdsResult<Dict<I, Option<SR>>>> => (results) =>
   pipe(
     results,
     Dict_.mergeSymmetric(
@@ -160,42 +160,43 @@ export const reduceResult = <I extends Id, SR extends Result>(
     ),
   );
 
-export function queryExamples<I extends Id, SQ extends Query>(
+export function queryExamples<I extends Id<any>, SQ extends Query<any>>(
   ids: Examples<I>,
   subQueries: Examples<SQ>,
-): Examples<IdsQuery<SQ, I>> {
+): Examples<IdsQuery<Dict<I, SQ>>> {
   return pipe(
     NEGenF_.sequenceT(ids, subQueries),
     NEGenF_.map(([id, subQuery]) => Dict_.dict([id, subQuery])),
   );
 }
 
-export function resultExamples<I extends Id, SR extends Result>(
+export function resultExamples<I extends Id<any>, SR extends Result<any>>(
   ids: Examples<I>,
   subResults: Examples<SR>,
-): Examples<IdsResult<SR, I>> {
+): Examples<IdsResult<Dict<I, Option<SR>>>> {
   return pipe(
     NEGenF_.sequenceT(ids, subResults),
     NEGenF_.map(
-      ([id, subResult]): IdsResult<SR, I> => Dict_.dict([id, Option_.some(subResult)]),
+      ([id, subResult]): IdsResult<Dict<I, Option<SR>>> =>
+        Dict_.dict([id, Option_.some(subResult)]),
     ),
   );
 }
 
 export const bundle = <
-  Q extends Query,
-  R extends Result,
-  E extends Err,
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
   C extends Context,
-  QA extends Resolvers,
-  RA extends Reporters,
-  I extends Id
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>,
+  I extends Id<any>
 >(
   id: { Id: IdCodec<I>; idExamples: NonEmptyArray<I> },
   item: Protocol<Q, R, E, Prepend<I, C>, QA, RA>,
   queryConnector: ResolverConnector<ExistenceQuery<I>, Existence, E, C, QA>,
   resultConnector: ReporterConnector<Existence, Prepend<I, C>, RA>,
-): Protocol<IdsQuery<Q, I>, IdsResult<R, I>, E, C, QA, RA> =>
+): Protocol<IdsQuery<Dict<I, Q>>, IdsResult<Dict<I, Option<R>>>, E, C, QA, RA> =>
   protocol({
     Query: Dict(id.Id, item.Query),
     Result: Dict(id.Id, tOption(item.Result)),
