@@ -9,7 +9,7 @@ import * as Option_ from 'fp-ts/lib/Option';
 
 import { Zero, zero, Prepend, prepend, Onion } from './utils/onion';
 import { Dict as _Dict, dict as _dict } from './utils/dict';
-import { NEGenF, neGenF } from './utils/negf';
+import { NonEmptyList, nonEmptyList } from './utils/non-empty-list';
 
 export * as ids from './shapes/ids';
 export * as keys from './shapes/keys';
@@ -289,8 +289,8 @@ export const constructors = <
   err: (e) => e,
 });
 
-export type Examples<A> = NEGenF<A>;
-export const examples = neGenF;
+export type Examples<A> = NonEmptyList<A>;
+export const examples = nonEmptyList;
 
 export type QueryExamplesMapping<
   P extends Property<string>,

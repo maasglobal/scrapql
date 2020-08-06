@@ -4,10 +4,8 @@ import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 
 /* eslint-disable fp/no-let, fp/no-loops, fp/no-mutation, fp/no-throw */
 
-export type NEGenFResult<A> = IteratorResult<A, A>;
-
-export type NEGenF<A> = () => Generator<A, A, undefined>;
-export function neGenF<A>(nea: NonEmptyArray<A>): NEGenF<A> {
+export type NonEmptyList<A> = () => Generator<A, A, undefined>;
+export function nonEmptyList<A>(nea: NonEmptyArray<A>): NonEmptyList<A> {
   return function* () {
     for (const a of NonEmptyArray_.init(nea)) {
       yield a;
@@ -16,7 +14,7 @@ export function neGenF<A>(nea: NonEmptyArray<A>): NEGenF<A> {
   };
 }
 
-export function toNEArray<A>(gen: NEGenF<A>): NonEmptyArray<A> {
+export function toNonEmptyArray<A>(gen: NonEmptyList<A>): NonEmptyArray<A> {
   const handle = gen();
   const init = [];
   let last;
@@ -32,13 +30,15 @@ export function toNEArray<A>(gen: NEGenF<A>): NonEmptyArray<A> {
   return NonEmptyArray_.snoc(init, last);
 }
 
-export function head<A>(gen: NEGenF<A>): A {
+export function head<A>(gen: NonEmptyList<A>): A {
   const handle = gen();
   const { value } = handle.next();
   return value;
 }
 
-export function fromGF<A>(gf: () => Generator<A, void, undefined>): NEGenF<A> {
+export function fromGenerator<A>(
+  gf: () => Generator<A, void, undefined>,
+): NonEmptyList<A> {
   return function* (): Generator<A, A, undefined> {
     const handle = gf();
     const first = handle.next();
@@ -58,8 +58,8 @@ export function fromGF<A>(gf: () => Generator<A, void, undefined>): NEGenF<A> {
 }
 
 export function take(limit: number) {
-  return function <A>(gen: NEGenF<A>): NEGenF<A> {
-    return fromGF(function* () {
+  return function <A>(gen: NonEmptyList<A>): NonEmptyList<A> {
+    return fromGenerator(function* () {
       const handle = gen();
       let i = 0;
       while (i < limit) {
@@ -75,8 +75,8 @@ export function take(limit: number) {
 }
 
 export function map<A, B>(f: (a: A) => B) {
-  return function (gen: NEGenF<A>): NEGenF<B> {
-    return fromGF(function* () {
+  return function (gen: NonEmptyList<A>): NonEmptyList<B> {
+    return fromGenerator(function* () {
       const handle = gen();
       while (true) {
         const { done, value } = handle.next();
@@ -89,10 +89,10 @@ export function map<A, B>(f: (a: A) => B) {
   };
 }
 
-export function sequenceT<I extends NonEmptyArray<NEGenF<any>>>(
+export function sequenceT<I extends NonEmptyArray<NonEmptyList<any>>>(
   ...generators: I
-): NEGenF<{ [K in keyof I]: I[K] extends NEGenF<infer A> ? A : never }> {
-  return fromGF(function* () {
+): NonEmptyList<{ [K in keyof I]: I[K] extends NonEmptyList<infer A> ? A : never }> {
+  return fromGenerator(function* () {
     const [first, ...more] = generators;
     if (more.length === 0) {
       const handle = first();
@@ -128,12 +128,12 @@ export function sequenceT<I extends NonEmptyArray<NEGenF<any>>>(
   });
 }
 
-export function sequenceS<O extends Record<string, NEGenF<any>>>(
+export function sequenceS<O extends Record<string, NonEmptyList<any>>>(
   generators: {
     [I in keyof O]: O[I];
   },
-): NEGenF<{ [I in keyof O]: O[I] extends NEGenF<infer A> ? A : never }> {
-  return fromGF(function* () {
+): NonEmptyList<{ [I in keyof O]: O[I] extends NonEmptyList<infer A> ? A : never }> {
+  return fromGenerator(function* () {
     const [[firstKey, firstGen], ...more] = Object.entries(generators);
     if (more.length === 0) {
       const handle = firstGen();
