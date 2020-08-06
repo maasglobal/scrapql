@@ -14,7 +14,7 @@ import { array } from 'fp-ts/lib/Array';
 import { identity } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as NEGenF_ from '../utils/negf';
+import * as NonEmptyList_ from '../utils/non-empty-list';
 
 import {
   Context,
@@ -124,14 +124,14 @@ export function queryExamples<
   P extends Property<string>,
   Q extends PropertiesQuery<{ [I in P]: Query<any> }>
 >(subQueries: QueryExamplesMapping<P, Q>): Examples<Q> {
-  return NEGenF_.sequenceS(subQueries) as Examples<Q>;
+  return NonEmptyList_.sequenceS(subQueries) as Examples<Q>;
 }
 
 export function resultExamples<
   P extends Property<string>,
   R extends PropertiesResult<{ [I in P]: Result<any> }>
 >(subResults: ResultExamplesMapping<P, R>): Examples<R> {
-  return NEGenF_.sequenceS(subResults) as Examples<R>;
+  return NonEmptyList_.sequenceS(subResults) as Examples<R>;
 }
 
 export const bundle = <O extends Record<string, Protocol<any, any, any, any, any, any>>>(

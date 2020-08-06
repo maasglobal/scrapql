@@ -1,11 +1,11 @@
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as NEGenF_ from '../negf';
-import { NEGenF } from '../negf';
+import * as NonEmptyList_ from '../non-empty-list';
+import { NonEmptyList } from '../non-empty-list';
 
-describe('NEGenF', () => {
-  it('fromGF', () => {
-    const gen: NEGenF<'a' | 'b' | 'c'> = NEGenF_.fromGF(function* () {
+describe('NonEmptyList', () => {
+  it('fromGenerator', () => {
+    const gen: NonEmptyList<'a' | 'b' | 'c'> = NonEmptyList_.fromGenerator(function* () {
       yield 'a';
       yield 'b';
       yield 'c';
@@ -17,14 +17,14 @@ describe('NEGenF', () => {
   });
 
   it('map', () => {
-    const numbers: NEGenF<number> = NEGenF_.fromGF(function* () {
+    const numbers: NonEmptyList<number> = NonEmptyList_.fromGenerator(function* () {
       yield 1;
       yield 2;
       yield 3;
     });
     const even = pipe(
       numbers,
-      NEGenF_.map((x) => 2 * x),
+      NonEmptyList_.map((x) => 2 * x),
     );
     const handle = even();
     expect(handle.next()).toStrictEqual({ value: 2, done: false });
@@ -33,7 +33,7 @@ describe('NEGenF', () => {
   });
 
   it('take', () => {
-    const numbers: NEGenF<number> = NEGenF_.fromGF(function* () {
+    const numbers: NonEmptyList<number> = NonEmptyList_.fromGenerator(function* () {
       yield 1;
       yield 2;
       yield 3;
@@ -41,7 +41,7 @@ describe('NEGenF', () => {
       yield 5;
       yield 6;
     });
-    const oneTwoThree = pipe(numbers, NEGenF_.take(3));
+    const oneTwoThree = pipe(numbers, NonEmptyList_.take(3));
     const handle = oneTwoThree();
     expect(handle.next()).toStrictEqual({ value: 1, done: false });
     expect(handle.next()).toStrictEqual({ value: 2, done: false });
@@ -49,12 +49,12 @@ describe('NEGenF', () => {
   });
 
   it('take too many', () => {
-    const numbers: NEGenF<number> = NEGenF_.fromGF(function* () {
+    const numbers: NonEmptyList<number> = NonEmptyList_.fromGenerator(function* () {
       yield 1;
       yield 2;
       yield 3;
     });
-    const allThree = pipe(numbers, NEGenF_.take(10));
+    const allThree = pipe(numbers, NonEmptyList_.take(10));
     const handle = allThree();
     expect(handle.next()).toStrictEqual({ value: 1, done: false });
     expect(handle.next()).toStrictEqual({ value: 2, done: false });
@@ -62,31 +62,31 @@ describe('NEGenF', () => {
   });
 
   it('head', () => {
-    const fooBar: NEGenF<'foo' | 'bar'> = NEGenF_.fromGF(function* () {
+    const fooBar: NonEmptyList<'foo' | 'bar'> = NonEmptyList_.fromGenerator(function* () {
       yield 'foo';
       yield 'bar';
     });
-    expect(NEGenF_.head(fooBar)).toStrictEqual('foo');
+    expect(NonEmptyList_.head(fooBar)).toStrictEqual('foo');
   });
 
   it('sequenceT1', () => {
     type AB = 'a' | 'b';
-    const ab: NEGenF<AB> = NEGenF_.neGenF(['a', 'b']);
-    type One = [NEGenF<AB>];
+    const ab: NonEmptyList<AB> = NonEmptyList_.nonEmptyList(['a', 'b']);
+    type One = [NonEmptyList<AB>];
     const separate: One = [ab];
-    const combined: NEGenF<[AB]> = pipe(NEGenF_.sequenceT(...separate));
+    const combined: NonEmptyList<[AB]> = pipe(NonEmptyList_.sequenceT(...separate));
     const handle = combined();
     expect(handle.next()).toStrictEqual({ value: ['a'], done: false });
     expect(handle.next()).toStrictEqual({ value: ['b'], done: true });
   });
   it('sequenceT2', () => {
     type AB = 'a' | 'b';
-    const ab: NEGenF<AB> = NEGenF_.neGenF(['a', 'b']);
+    const ab: NonEmptyList<AB> = NonEmptyList_.nonEmptyList(['a', 'b']);
     type CD = 'c' | 'd';
-    const cd: NEGenF<CD> = NEGenF_.neGenF(['c', 'd']);
-    type Two = [NEGenF<AB>, NEGenF<CD>];
+    const cd: NonEmptyList<CD> = NonEmptyList_.nonEmptyList(['c', 'd']);
+    type Two = [NonEmptyList<AB>, NonEmptyList<CD>];
     const separate: Two = [ab, cd];
-    const combined: NEGenF<[AB, CD]> = pipe(NEGenF_.sequenceT(...separate));
+    const combined: NonEmptyList<[AB, CD]> = pipe(NonEmptyList_.sequenceT(...separate));
     const handle = combined();
     expect(handle.next()).toStrictEqual({ value: ['a', 'c'], done: false });
     expect(handle.next()).toStrictEqual({ value: ['a', 'd'], done: false });
@@ -95,14 +95,16 @@ describe('NEGenF', () => {
   });
   it('sequenceT3', () => {
     type AB = 'a' | 'b';
-    const ab: NEGenF<AB> = NEGenF_.neGenF(['a', 'b']);
+    const ab: NonEmptyList<AB> = NonEmptyList_.nonEmptyList(['a', 'b']);
     type CD = 'c' | 'd';
-    const cd: NEGenF<CD> = NEGenF_.neGenF(['c', 'd']);
+    const cd: NonEmptyList<CD> = NonEmptyList_.nonEmptyList(['c', 'd']);
     type EF = 'e' | 'f';
-    const ef: NEGenF<EF> = NEGenF_.neGenF(['e', 'f']);
-    type Three = [NEGenF<AB>, NEGenF<CD>, NEGenF<EF>];
+    const ef: NonEmptyList<EF> = NonEmptyList_.nonEmptyList(['e', 'f']);
+    type Three = [NonEmptyList<AB>, NonEmptyList<CD>, NonEmptyList<EF>];
     const separate: Three = [ab, cd, ef];
-    const combined: NEGenF<[AB, CD, EF]> = pipe(NEGenF_.sequenceT(...separate));
+    const combined: NonEmptyList<[AB, CD, EF]> = pipe(
+      NonEmptyList_.sequenceT(...separate),
+    );
     const handle = combined();
     expect(handle.next()).toStrictEqual({ value: ['a', 'c', 'e'], done: false });
     expect(handle.next()).toStrictEqual({ value: ['a', 'c', 'f'], done: false });
@@ -116,12 +118,12 @@ describe('NEGenF', () => {
 
   it('sequenceS1', () => {
     type AB = 'a' | 'b';
-    const ab: NEGenF<AB> = NEGenF_.neGenF(['a', 'b']);
+    const ab: NonEmptyList<AB> = NonEmptyList_.nonEmptyList(['a', 'b']);
     type One = {
-      ab: NEGenF<AB>;
+      ab: NonEmptyList<AB>;
     };
     const separate: One = { ab };
-    const combined: NEGenF<{ ab: AB }> = NEGenF_.sequenceS(separate);
+    const combined: NonEmptyList<{ ab: AB }> = NonEmptyList_.sequenceS(separate);
     const handle = combined();
     expect(handle.next()).toStrictEqual({
       value: { ab: 'a' },
@@ -134,15 +136,15 @@ describe('NEGenF', () => {
   });
   it('sequenceS2', () => {
     type AB = 'a' | 'b';
-    const ab: NEGenF<AB> = NEGenF_.neGenF(['a', 'b']);
+    const ab: NonEmptyList<AB> = NonEmptyList_.nonEmptyList(['a', 'b']);
     type CD = 'c' | 'd';
-    const cd: NEGenF<CD> = NEGenF_.neGenF(['c', 'd']);
+    const cd: NonEmptyList<CD> = NonEmptyList_.nonEmptyList(['c', 'd']);
     type Two = {
-      ab: NEGenF<AB>;
-      cd: NEGenF<CD>;
+      ab: NonEmptyList<AB>;
+      cd: NonEmptyList<CD>;
     };
     const separate: Two = { ab, cd };
-    const combined: NEGenF<{ ab: AB; cd: CD }> = NEGenF_.sequenceS(separate);
+    const combined: NonEmptyList<{ ab: AB; cd: CD }> = NonEmptyList_.sequenceS(separate);
     const handle = combined();
     expect(handle.next()).toStrictEqual({
       value: { ab: 'a', cd: 'c' },
@@ -163,18 +165,20 @@ describe('NEGenF', () => {
   });
   it('sequenceS3', () => {
     type AB = 'a' | 'b';
-    const ab: NEGenF<AB> = NEGenF_.neGenF(['a', 'b']);
+    const ab: NonEmptyList<AB> = NonEmptyList_.nonEmptyList(['a', 'b']);
     type CD = 'c' | 'd';
-    const cd: NEGenF<CD> = NEGenF_.neGenF(['c', 'd']);
+    const cd: NonEmptyList<CD> = NonEmptyList_.nonEmptyList(['c', 'd']);
     type EF = 'e' | 'f';
-    const ef: NEGenF<EF> = NEGenF_.neGenF(['e', 'f']);
+    const ef: NonEmptyList<EF> = NonEmptyList_.nonEmptyList(['e', 'f']);
     type Three = {
-      ab: NEGenF<AB>;
-      cd: NEGenF<CD>;
-      ef: NEGenF<EF>;
+      ab: NonEmptyList<AB>;
+      cd: NonEmptyList<CD>;
+      ef: NonEmptyList<EF>;
     };
     const separate: Three = { ab, cd, ef };
-    const combined: NEGenF<{ ab: AB; cd: CD; ef: EF }> = NEGenF_.sequenceS(separate);
+    const combined: NonEmptyList<{ ab: AB; cd: CD; ef: EF }> = NonEmptyList_.sequenceS(
+      separate,
+    );
     const handle = combined();
     expect(handle.next()).toStrictEqual({
       value: { ab: 'a', cd: 'c', ef: 'e' },

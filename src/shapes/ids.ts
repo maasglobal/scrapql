@@ -19,7 +19,7 @@ import { pipe } from 'fp-ts/lib/pipeable';
 
 import * as Context_ from '../utils/onion';
 import * as Dict_ from '../utils/dict';
-import * as NEGenF_ from '../utils/negf';
+import * as NonEmptyList_ from '../utils/non-empty-list';
 import * as Onion_ from '../utils/onion';
 import { Dict } from '../utils/dict';
 import { Prepend } from '../utils/onion';
@@ -165,8 +165,8 @@ export function queryExamples<I extends Id<any>, SQ extends Query<any>>(
   subQueries: Examples<SQ>,
 ): Examples<IdsQuery<Dict<I, SQ>>> {
   return pipe(
-    NEGenF_.sequenceT(ids, subQueries),
-    NEGenF_.map(([id, subQuery]) => Dict_.dict([id, subQuery])),
+    NonEmptyList_.sequenceT(ids, subQueries),
+    NonEmptyList_.map(([id, subQuery]) => Dict_.dict([id, subQuery])),
   );
 }
 
@@ -175,8 +175,8 @@ export function resultExamples<I extends Id<any>, SR extends Result<any>>(
   subResults: Examples<SR>,
 ): Examples<IdsResult<Dict<I, Option<SR>>>> {
   return pipe(
-    NEGenF_.sequenceT(ids, subResults),
-    NEGenF_.map(
+    NonEmptyList_.sequenceT(ids, subResults),
+    NonEmptyList_.map(
       ([id, subResult]): IdsResult<Dict<I, Option<SR>>> =>
         Dict_.dict([id, Option_.some(subResult)]),
     ),
