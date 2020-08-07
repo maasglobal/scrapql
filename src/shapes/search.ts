@@ -1,7 +1,6 @@
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
-import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
@@ -22,28 +21,23 @@ import {
   Err,
   Examples,
   Id,
-  IdCodec,
-  Protocol,
   Query,
   QueryProcessor,
-  ReporterConnector,
   Reporters,
-  ResolverConnector,
   Resolvers,
   Result,
   ResultProcessor,
   ResultReducer,
+  SearchBundle,
+  SearchBundleSeed,
   SearchQuery,
   SearchResult,
   Terms,
-  TermsCodec,
-  TermsQuery,
-  TermsResult,
+  TermsReporterConnector,
+  TermsResolverConnector,
   structuralMismatch,
   examples,
   protocol,
-  termsQuery,
-  termsResult,
 } from '../scrapql';
 
 // search query requests some information that may zero or more instances in the database
@@ -58,7 +52,7 @@ export function processQuery<
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  connect: ResolverConnector<TermsQuery<T>, TermsResult<I>, E, C, A>,
+  connect: TermsResolverConnector<T, Array<I>, E, C, A>,
   subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, A>,
 ): QueryProcessor<Q, SearchResult<Dict<T, Dict<I, SR>>>, E, C, A> {
   return (query: Q) => (
@@ -71,7 +65,7 @@ export function processQuery<
           (terms: T, subQuery: SQ): TaskEither<E, Dict<I, SR>> => {
             const idResolver = connect(resolvers);
             return pipe(
-              idResolver(termsQuery(terms), context),
+              idResolver(terms, context),
               TaskEither_.chain(
                 (ids: Array<I>): TaskEither<E, Dict<I, SR>> =>
                   pipe(
@@ -103,7 +97,7 @@ export function processResult<
   I extends Id<any>,
   SR extends Result<any>
 >(
-  connect: ReporterConnector<TermsResult<I>, Prepend<T, C>, A>,
+  connect: TermsReporterConnector<T, Array<I>, C, A>,
   subProcessor: ResultProcessor<SR, Prepend<I, C>, A>,
 ): ResultProcessor<R, C, A> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
@@ -115,8 +109,7 @@ export function processResult<
             const termsContext = pipe(context, Onion_.prepend(terms));
             const reportIds: Task<void> = pipe(
               Dict_.keys(subResults),
-              (ids: Array<I>): Task<void> =>
-                connect(reporters)(termsResult<I>(ids), termsContext),
+              (ids: Array<I>): Task<void> => connect(reporters)(ids, termsContext),
             );
             const reportResults: Array<Task<void>> = pipe(
               subResults,
@@ -181,32 +174,31 @@ export function resultExamples<
 }
 
 export const bundle = <
-  Q extends Query<any>,
-  R extends Result<any>,
   E extends Err<any>,
   C extends Context,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   T extends Terms<any>,
-  I extends Id<any>
+  I extends Id<any>,
+  SQ extends Query<any>,
+  SR extends Result<any>
 >(
-  terms: { Terms: TermsCodec<T>; termsExamples: NonEmptyArray<T> },
-  id: { Id: IdCodec<I>; idExamples: NonEmptyArray<I> },
-  item: Protocol<Q, R, E, Prepend<I, C>, QA, RA>,
-  queryConnector: ResolverConnector<TermsQuery<T>, TermsResult<I>, E, C, QA>,
-  resultConnector: ReporterConnector<TermsResult<I>, Prepend<T, C>, RA>,
-): Protocol<SearchQuery<Dict<T, Q>>, SearchResult<Dict<T, Dict<I, R>>>, E, C, QA, RA> =>
+  seed: SearchBundleSeed<E, C, QA, RA, T, I, SQ, SR>,
+): SearchBundle<E, C, QA, RA, T, I, SQ, SR> =>
   protocol({
-    Query: Dict(terms.Terms, item.Query),
-    Result: Dict(terms.Terms, Dict(id.Id, item.Result)),
-    Err: item.Err,
-    processQuery: processQuery(queryConnector, item.processQuery),
-    processResult: processResult(resultConnector, item.processResult),
-    reduceResult: reduceResult(item.reduceResult),
-    queryExamples: queryExamples(examples(terms.termsExamples), item.queryExamples),
+    Query: Dict(seed.terms.Terms, seed.item.Query),
+    Result: Dict(seed.terms.Terms, Dict(seed.id.Id, seed.item.Result)),
+    Err: seed.item.Err,
+    processQuery: processQuery(seed.queryConnector, seed.item.processQuery),
+    processResult: processResult(seed.resultConnector, seed.item.processResult),
+    reduceResult: reduceResult(seed.item.reduceResult),
+    queryExamples: queryExamples(
+      examples(seed.terms.termsExamples),
+      seed.item.queryExamples,
+    ),
     resultExamples: resultExamples(
-      examples(terms.termsExamples),
-      examples(id.idExamples),
-      item.resultExamples,
+      examples(seed.terms.termsExamples),
+      examples(seed.id.idExamples),
+      seed.item.resultExamples,
     ),
   });

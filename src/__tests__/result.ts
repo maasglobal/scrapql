@@ -30,8 +30,14 @@ describe('result', () => {
   type Reporters = {
     learnProperty1Existence: (r: scrapql.Existence, c: Ctx<Id>) => Task<void>;
     learnProperty3Match: (r: Array<Id>, c: Ctx<Terms>) => Task<void>;
-    receiveKeyResult: (r: KeyResult, c: Ctx<Key, Ctx<Id>>) => Task<void>;
-    receiveProperty2Result: (r: Property2Result, c: Ctx0) => Task<void>;
+    receiveKeyResult: (
+      r: KeyResultPayload,
+      c: Ctx<KeyQueryPayload, Ctx<Key, Ctx<Id>>>,
+    ) => Task<void>;
+    receiveProperty2Result: (
+      r: Property2ResultPayload,
+      c: Ctx<Property2QueryPayload>,
+    ) => Task<void>;
   };
 
   function createReporters(): Reporters {
@@ -43,16 +49,22 @@ describe('result', () => {
         jest.fn((_0: Array<Id>, _1: Ctx<Terms>) => undefined),
       ),
       receiveKeyResult: loggerTask(
-        jest.fn((_0: KeyResult, _1: Ctx<Key, Ctx<Id>>) => undefined),
+        jest.fn(
+          (_0: KeyResultPayload, _1: Ctx<KeyQueryPayload, Ctx<Key, Ctx<Id>>>) =>
+            undefined,
+        ),
       ),
       receiveProperty2Result: loggerTask(
-        jest.fn((_0: Property2Result, _1: Ctx0) => undefined),
+        jest.fn(
+          (_0: Property2ResultPayload, _1: Ctx<Property2QueryPayload>) => undefined,
+        ),
       ),
     };
   }
 
   type CustomRP<R, C extends scrapql.Context> = scrapql.ResultProcessor<R, C, Reporters>;
 
+  const QUERY = `${name}/${version}/scrapql/test/query`;
   const RESULT = `${name}/${version}/scrapql/test/result`;
 
   type Id = string & ('id1' | 'id2');
@@ -71,8 +83,15 @@ describe('result', () => {
   type Key = string;
   const key1: Key = 'key1';
 
-  type KeyResult = string;
-  const key1Result: KeyResult = 'result1';
+  type KeyQueryPayload = string;
+  const keyQueryPayload: KeyQueryPayload = 'query1';
+
+  type KeyResultPayload = string;
+  const keyResultPayload: KeyResultPayload = 'result1';
+
+  type KeyResult = scrapql.LeafResult<KeyQueryPayload, KeyResultPayload>;
+  const key1Result: KeyResult = { q: keyQueryPayload, r: keyResultPayload };
+
   const processKey: CustomRP<KeyResult, Ctx<Key, Ctx<Id>>> = scrapql.leaf.processResult(
     (r) => r.receiveKeyResult,
   );
@@ -84,7 +103,7 @@ describe('result', () => {
     await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
-      [key1Result, ctx(key1, ctx(id1))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
@@ -102,7 +121,7 @@ describe('result', () => {
     await ruins.fromTask(main);
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
-      [key1Result, ctx(key1, ctx(id1))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
@@ -135,13 +154,25 @@ describe('result', () => {
       [true, ctx(id1)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
-      [key1Result, ctx(key1, ctx(id1))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
-  type Property2Result = string;
-  const property2Result: Property2Result = 'result2';
+  type Property2QueryPayload = string;
+  type Property2ResultPayload = string;
+  const property2QueryPayload: Property2QueryPayload = 'query2';
+  const property2ResultPayload: Property2ResultPayload = 'result2';
+
+  type Property2Result = scrapql.LeafResult<
+    Property2QueryPayload,
+    Property2ResultPayload
+  >;
+  const property2Result: Property2Result = {
+    q: property2QueryPayload,
+    r: property2ResultPayload,
+  };
+
   const processProperty2: CustomRP<Property2Result, Ctx0> = scrapql.leaf.processResult(
     (r) => r.receiveProperty2Result,
   );
@@ -158,7 +189,7 @@ describe('result', () => {
     expect((reporters.learnProperty1Existence as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([
-      [property2Result, ctx0],
+      [property2ResultPayload, ctx(property2QueryPayload)],
     ]);
   });
 
@@ -187,19 +218,19 @@ describe('result', () => {
       [[id1], ctx(terms)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
-      [key1Result, ctx(key1, ctx(id1))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
 
   type RootResult = Partial<{
-    protocol: typeof RESULT;
+    protocol: scrapql.LiteralResult<typeof QUERY, typeof RESULT>;
     property1: Property1Result;
     property2: Property2Result;
     property3: Property3Result;
   }>;
   const rootResult: RootResult = {
-    protocol: RESULT,
+    protocol: { q: QUERY, r: RESULT },
     property1: property1Result,
     property3: property3Result,
   };
@@ -229,8 +260,8 @@ describe('result', () => {
       [[id1], ctx(terms)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
-      [key1Result, ctx(key1, ctx(id1))],
-      [key1Result, ctx(key1, ctx(id1))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
@@ -247,9 +278,13 @@ describe('result', () => {
       >(
         (r: Reporters) => r.learnProperty1Existence,
         scrapql.keys.processResult<KeysResult, Ctx<Id>, Reporters, Key, KeyResult>(
-          scrapql.leaf.processResult<KeyResult, Ctx<Key, Ctx<Id>>, Reporters>(
-            (r: Reporters) => r.receiveKeyResult,
-          ),
+          scrapql.leaf.processResult<
+            KeyResult,
+            Ctx<Key, Ctx<Id>>,
+            Reporters,
+            KeyQueryPayload,
+            KeyResultPayload
+          >((r: Reporters) => r.receiveKeyResult),
         ),
       ),
       property2: scrapql.leaf.processResult((r: Reporters) => r.receiveProperty2Result),
@@ -263,9 +298,13 @@ describe('result', () => {
       >(
         (r) => r.learnProperty3Match,
         scrapql.keys.processResult<KeysResult, Ctx<Id>, Reporters, Key, KeyResult>(
-          scrapql.leaf.processResult<KeyResult, Ctx<Key, Ctx<Id>>, Reporters>(
-            (r: Reporters) => r.receiveKeyResult,
-          ),
+          scrapql.leaf.processResult<
+            KeyResult,
+            Ctx<Key, Ctx<Id>>,
+            Reporters,
+            KeyQueryPayload,
+            KeyResultPayload
+          >((r: Reporters) => r.receiveKeyResult),
         ),
       ),
     });
@@ -283,8 +322,8 @@ describe('result', () => {
       [[id1], ctx(terms)],
     ]);
     expect((reporters.receiveKeyResult as any).mock.calls).toMatchObject([
-      [key1Result, ctx(key1, ctx(id1))],
-      [key1Result, ctx(key1, ctx(id1))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
+      [keyResultPayload, ctx(keyQueryPayload, ctx(key1, ctx(id1)))],
     ]);
     expect((reporters.receiveProperty2Result as any).mock.calls).toMatchObject([]);
   });
