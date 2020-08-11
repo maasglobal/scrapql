@@ -40,6 +40,7 @@ import {
   ResultProcessorMapping,
   ResultReducer,
   ResultReducerMapping,
+  Workspace,
   protocol,
 } from '../scrapql';
 
@@ -49,18 +50,20 @@ export function processQuery<
   Q extends PropertiesQuery<any>,
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<any>,
   A extends Resolvers<any>,
   R extends PropertiesResult<any>
->(processors: QueryProcessorMapping<Q, R, E, C, A>): QueryProcessor<Q, R, E, C, A> {
+>(processors: QueryProcessorMapping<Q, R, E, C, W, A>): QueryProcessor<Q, R, E, C, W, A> {
   return <P extends Property<string> & keyof Q & keyof R>(query: Q) => (
     context: C,
+    workspace: W,
   ): ReaderTaskEither<A, E, R> => {
     return (resolvers) => {
       const tasks: Record<P, TaskEither<E, R[P]>> = pipe(
         query,
         Record_.mapWithIndex((property, subQuery: Q[P]) => {
           const processor = processors[property];
-          const subResult = processor(subQuery)(context)(resolvers);
+          const subResult = processor(subQuery)(context, workspace)(resolvers);
           return subResult;
         }),
       );
@@ -86,7 +89,7 @@ export function processResult<
         result,
         Record_.mapWithIndex((property, subResult: R[P]) => {
           const processor = processors[property];
-          return processor(subResult)(context)(reporters);
+          return processor(subResult)(context, [])(reporters);
         }),
       );
       const tasks: Array<Task<void>> = pipe(

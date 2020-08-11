@@ -44,13 +44,11 @@ type Json =
     | Array<Json>;
 
 interface Database {
-  hasCustomer: (c: string) => Promise<boolean>;
-  getCustomer: (c: string) => Promise<Json>;
+  getCustomer: (c: string) => Promise<undefined|Json>;
   getReport: (y: string) => Promise<Json>;
 }
 
 const db: Database = {
-  hasCustomer: (customerId) => Promise.resolve(example.customers.hasOwnProperty(customerId)),
   getCustomer: (customerId) => Promise.resolve(example.customers[customerId]),
   getReport: (year) => Promise.resolve(example.reports[year] || { profit: 0 }),
 };
@@ -135,6 +133,7 @@ import { TaskEither } from 'fp-ts/lib/TaskEither';
 
 import { pipe } from 'fp-ts/lib/pipeable';
 import * as Task_ from 'fp-ts/lib/Task';
+import * as Option_ from 'fp-ts/lib/Option';
 import * as Either_ from 'fp-ts/lib/Either';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { failure } from 'io-ts/lib/PathReporter'
@@ -144,8 +143,8 @@ import { Ctx } from 'scrapql';
 
 type Resolvers = scrapql.Resolvers<{
   readonly fetchReport: (a: true, b: Ctx<Year>) => TaskEither<Errors, Report>;
-  readonly fetchCustomer: (a: true, b: Ctx<CustomerId>) => TaskEither<Errors, Customer>;
-  readonly checkCustomerExistence: (a: CustomerId) => TaskEither<Errors, boolean>;
+  readonly fetchCustomer: (a: true, b: Ctx<CustomerId>, c: { customer: Customer }) => TaskEither<Errors, Customer>;
+  readonly checkCustomerExistence: (a: CustomerId) => TaskEither<Errors, Option<{ customer: Customer }>>;
 }>
 
 const resolvers: Resolvers = {
@@ -155,15 +154,20 @@ const resolvers: Resolvers = {
     TaskEither_.mapLeft(failure),
   ),
 
-  fetchCustomer: (_queryArgs, [customerId]) => pipe(
-    () => db.getCustomer(customerId),
-    Task_.map(Customer.decode),
-    TaskEither_.mapLeft(failure),
+  fetchCustomer: (_queryArgs, [_customerId], {customer}) => pipe(
+    customer,  // cached by checkCustomerExistence
+    TaskEither_.right,
   ),
 
   checkCustomerExistence: (customerId) => pipe(
-    () => db.hasCustomer(customerId),
-    Task_.map(Either_.right),
+    () => db.getCustomer(customerId),
+    Task_.map((nullable) => pipe(
+      Option_.fromNullable(nullable),
+      Option_.map(Customer.decode),
+      Option_.map(Either_.map((customer) => ({customer}))),
+      Option_.sequence(Either_.either),
+      Either_.mapLeft(failure),
+    )),
   ),
 
 };
@@ -178,20 +182,20 @@ import { QueryProcessor, Ctx0 } from 'scrapql';
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
-const processQuery: QueryProcessor<Query, Result, Errors, Ctx0, Resolvers> = scrapql.properties.processQuery<Query, Errors, Ctx0, Resolvers, Result>({
+const processQuery: QueryProcessor<Query, Result, Errors, Ctx0, {}, Resolvers> = scrapql.properties.processQuery<Query, Errors, Ctx0, {}, Resolvers, Result>({
   protocol: scrapql.literal.processQuery(RESULT_PROTOCOL),
     reports: scrapql.keys.processQuery(
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchReport)
-      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Report } }, Errors, Ctx<Year>, Resolvers> ,
+      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Report } }, Errors, Ctx<Year>, {}, Resolvers> ,
     ),
     customers: scrapql.ids.processQuery(
       (r: Resolvers) => r.checkCustomerExistence,
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchCustomer),
-      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Customer } }, Errors, Ctx<CustomerId>, Resolvers>,
-    ) as QueryProcessor<Dict<CustomerId, { get: { q: true; } }>, Dict<CustomerId, Option<{ get: { q: true, r: Customer } }>>, Errors, Ctx0, Resolvers>,
-  }) as QueryProcessor<Query, Result, Errors, Ctx0, Resolvers>;
+      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Customer } }, Errors, Ctx<CustomerId>, { customer: Customer}, Resolvers>,
+    ) as QueryProcessor<Dict<CustomerId, { get: { q: true; } }>, Dict<CustomerId, Option<{ get: { q: true, r: Customer } }>>, Errors, Ctx0, {}, Resolvers>,
+  }) as QueryProcessor<Query, Result, Errors, Ctx0, {}, Resolvers>;
 ```
 
 You can run the processor as follows.
@@ -201,7 +205,7 @@ import { processorInstance, ctx0 } from 'scrapql';
 import * as ruins from 'ruins-ts';
 
 async function generateExampleOutput() {
-  const qp = processorInstance(processQuery, ctx0, resolvers);
+  const qp = processorInstance(processQuery, ctx0, {}, resolvers);
   const q: Query = await validator(Query).decodePromise(exampleJsonQuery);
   const output = await ruins.fromTaskEither(qp(q));
   console.log(output);
@@ -284,7 +288,7 @@ It all comes together as the following query processor.
 
 ```typescript
 async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
-  const qp = processorInstance(processQuery, ctx0, resolvers);
+  const qp = processorInstance(processQuery, ctx0, [], resolvers);
   const q: Query = await validator(Query).decodePromise(jsonQuery);
   const r: Result = await ruins.fromTaskEither(qp(q));
   const jsonResult: Json = JSON.parse(JSON.stringify(Result.encode(r)));
@@ -359,6 +363,7 @@ type Protocol = Bundle<
   Result,
   Errors,
   Ctx0,
+  [],
   Resolvers,
   Reporters
 >;
@@ -402,7 +407,7 @@ async function server(request: string): Promise<string> {
       TaskEither_.fromEither,
     )),
     TaskEither_.chain((query: Query) => pipe(
-      processorInstance(processQuery, ctx0, resolvers),
+      processorInstance(processQuery, ctx0, [], resolvers),
       (qp) => qp(query),
     )),
     Task_.chainFirst((result: Either<Errors, Result>) => pipe(
@@ -454,7 +459,7 @@ async function client(query: Query): Promise<void> {
     TaskEither_.fold(
       (errors) => () => Promise.resolve(console.error(errors)),
       (result: Result) => pipe(
-        processorInstance( processResult, ctx0, reporters ),
+        processorInstance( processResult, ctx0, [], reporters ),
         (rp) => rp(result),
       ),
     ),

@@ -34,6 +34,7 @@ import {
   Result,
   ResultProcessor,
   ResultReducer,
+  Workspace,
   examples,
   protocol,
   structuralMismatch,
@@ -45,21 +46,25 @@ export function processQuery<
   Q extends KeysQuery<Dict<K, SQ>>,
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<any>,
   A extends Resolvers<any>,
   K extends Key<any>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  subProcessor: QueryProcessor<SQ, SR, E, Prepend<K, C>, A>,
-): QueryProcessor<Q, KeysResult<Dict<K, SR>>, E, C, A> {
-  return (query: Q) => (context: C): ReaderTaskEither<A, E, KeysResult<Dict<K, SR>>> => {
+  subProcessor: QueryProcessor<SQ, SR, E, Prepend<K, C>, W, A>,
+): QueryProcessor<Q, KeysResult<Dict<K, SR>>, E, C, W, A> {
+  return (query: Q) => (
+    context: C,
+    workspace: W,
+  ): ReaderTaskEither<A, E, KeysResult<Dict<K, SR>>> => {
     return (resolvers) =>
       pipe(
         query,
         Dict_.mapWithIndex(
           (key: K, subQuery: SQ): TaskEither<E, SR> => {
             const subContext = pipe(context, Context_.prepend(key));
-            return subProcessor(subQuery)(subContext)(resolvers);
+            return subProcessor(subQuery)(subContext, workspace)(resolvers);
           },
         ),
         Dict_.sequenceTaskEither,
@@ -82,7 +87,7 @@ export function processResult<
         result,
         Dict_.mapWithIndex((key: K, subResult: SR) => {
           const subContext = pipe(context, Onion_.prepend(key));
-          return subProcessor(subResult)(subContext)(reporters);
+          return subProcessor(subResult)(subContext, [])(reporters);
         }),
         Array_.map(([_k, v]) => v),
       );
@@ -128,14 +133,15 @@ export function resultExamples<K extends Key<any>, SR extends Result<any>>(
 export const bundle = <
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<any>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   K extends Key<any>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  seed: KeysBundleSeed<E, C, QA, RA, K, SQ, SR>,
-): KeysBundle<E, C, QA, RA, K, SQ, SR> =>
+  seed: KeysBundleSeed<E, C, W, QA, RA, K, SQ, SR>,
+): KeysBundle<E, C, W, QA, RA, K, SQ, SR> =>
   protocol({
     Query: Dict(seed.key.Key, seed.item.Query),
     Result: Dict(seed.key.Key, seed.item.Result),

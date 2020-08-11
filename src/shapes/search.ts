@@ -15,6 +15,7 @@ import * as NonEmptyList_ from '../utils/non-empty-list';
 import * as Onion_ from '../utils/onion';
 import { Dict } from '../utils/dict';
 import { Prepend } from '../utils/onion';
+import { MergeObject, mergeObject } from '../utils/object';
 
 import {
   Context,
@@ -35,6 +36,7 @@ import {
   Terms,
   TermsReporterConnector,
   TermsResolverConnector,
+  Workspace,
   structuralMismatch,
   examples,
   protocol,
@@ -46,17 +48,20 @@ export function processQuery<
   Q extends SearchQuery<Dict<T, SQ>>,
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<object>,
   A extends Resolvers<any>,
   T extends Terms<any>,
   I extends Id<any>,
+  WX extends Workspace<object>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  connect: TermsResolverConnector<T, Array<I>, E, C, A>,
-  subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, A>,
-): QueryProcessor<Q, SearchResult<Dict<T, Dict<I, SR>>>, E, C, A> {
+  connect: TermsResolverConnector<T, Dict<I, WX>, E, C, W, A>,
+  subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, MergeObject<W, WX>, A>,
+): QueryProcessor<Q, SearchResult<Dict<T, Dict<I, SR>>>, E, C, W, A> {
   return (query: Q) => (
     context: C,
+    workspace: W,
   ): ReaderTaskEither<A, E, SearchResult<Dict<T, Dict<I, SR>>>> => {
     return (resolvers) => {
       const tasks: Dict<T, TaskEither<E, Dict<I, SR>>> = pipe(
@@ -65,14 +70,17 @@ export function processQuery<
           (terms: T, subQuery: SQ): TaskEither<E, Dict<I, SR>> => {
             const idResolver = connect(resolvers);
             return pipe(
-              idResolver(terms, context),
+              idResolver(terms, context, workspace),
               TaskEither_.chain(
-                (ids: Array<I>): TaskEither<E, Dict<I, SR>> =>
+                (match: Dict<I, WX>): TaskEither<E, Dict<I, SR>> =>
                   pipe(
-                    ids,
-                    Array_.map((id: I): [I, TaskEither<E, SR>] => {
+                    match,
+                    Array_.map(([id, x]: [I, WX]): [I, TaskEither<E, SR>] => {
                       const subContext = pipe(context, Context_.prepend(id));
-                      const subResult = subProcessor(subQuery)(subContext)(resolvers);
+                      const subWorkspace = mergeObject(workspace, x);
+                      const subResult = subProcessor(subQuery)(subContext, subWorkspace)(
+                        resolvers,
+                      );
                       return [id, subResult];
                     }),
                     Dict_.sequenceTaskEither,
@@ -109,13 +117,13 @@ export function processResult<
             const termsContext = pipe(context, Onion_.prepend(terms));
             const reportIds: Task<void> = pipe(
               Dict_.keys(subResults),
-              (ids: Array<I>): Task<void> => connect(reporters)(ids, termsContext),
+              (ids: Array<I>): Task<void> => connect(reporters)(ids, termsContext, []),
             );
             const reportResults: Array<Task<void>> = pipe(
               subResults,
               Array_.map(([id, subResult]: [I, SR]) => {
                 const idContext = pipe(context, Onion_.prepend(id));
-                return subProcessor(subResult)(idContext)(reporters);
+                return subProcessor(subResult)(idContext, [])(reporters);
               }),
             );
             return pipe([[reportIds], reportResults], Array_.flatten);
@@ -176,15 +184,17 @@ export function resultExamples<
 export const bundle = <
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<{ [WP in Exclude<string, keyof WX>]: any }>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   T extends Terms<any>,
   I extends Id<any>,
+  WX extends Workspace<object>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  seed: SearchBundleSeed<E, C, QA, RA, T, I, SQ, SR>,
-): SearchBundle<E, C, QA, RA, T, I, SQ, SR> =>
+  seed: SearchBundleSeed<E, C, W, QA, RA, T, I, WX, SQ, SR>,
+): SearchBundle<E, C, W, QA, RA, T, I, SQ, SR> =>
   protocol({
     Query: Dict(seed.terms.Terms, seed.item.Query),
     Result: Dict(seed.terms.Terms, Dict(seed.id.Id, seed.item.Result)),
