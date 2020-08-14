@@ -3,7 +3,6 @@ import * as Either_ from 'fp-ts/lib/Either';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import * as Option_ from 'fp-ts/lib/Option';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
-import * as boolean_ from 'fp-ts/lib/boolean';
 import { Either, either } from 'fp-ts/lib/Either';
 import { flow } from 'fp-ts/lib/function';
 import { NonEmptyArray, nonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
@@ -24,6 +23,7 @@ import * as Onion_ from '../utils/onion';
 import { Dict } from '../utils/dict';
 import { Prepend } from '../utils/onion';
 import { mergeOption } from '../utils/option';
+import { MergeObject, mergeObject } from '../utils/object';
 
 import {
   Context,
@@ -45,6 +45,7 @@ import {
   Result,
   ResultProcessor,
   ResultReducer,
+  Workspace,
   examples,
   protocol,
   structuralMismatch,
@@ -56,16 +57,19 @@ export function processQuery<
   Q extends IdsQuery<Dict<I, SQ>>,
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<object>,
   A extends Resolvers<any>,
   I extends Id<any>,
+  WX extends Workspace<object>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  connect: ExistenceResolverConnector<I, Existence, E, C, A>,
-  subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, A>,
-): QueryProcessor<Q, IdsResult<Dict<I, Option<SR>>>, E, C, A> {
+  connect: ExistenceResolverConnector<I, Option<WX>, E, C, W, A>,
+  subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, MergeObject<W, WX>, A>,
+): QueryProcessor<Q, IdsResult<Dict<I, Option<SR>>>, E, C, W, A> {
   return (query: Q) => (
     context: C,
+    workspace: W,
   ): ReaderTaskEither<A, E, IdsResult<Dict<I, Option<SR>>>> => {
     return (resolvers) => {
       const tasks: Dict<I, TaskEither<E, Option<SR>>> = pipe(
@@ -75,18 +79,20 @@ export function processQuery<
             const subContext = pipe(context, Context_.prepend(id));
             const existenceCheck = connect(resolvers);
             return pipe(
-              existenceCheck(id, context),
+              existenceCheck(id, context, workspace),
               TaskEither_.chain(
-                (exists: Existence): TaskEither<E, Option<SR>> =>
+                (exists: Option<WX>): TaskEither<E, Option<SR>> =>
                   pipe(
                     exists,
-                    boolean_.fold(
+                    Option_.fold(
                       () => TaskEither_.right(Option_.none),
-                      () =>
-                        pipe(
-                          subProcessor(subQuery)(subContext)(resolvers),
+                      (x) => {
+                        const subWorkspace = mergeObject(workspace, x);
+                        return pipe(
+                          subProcessor(subQuery)(subContext, subWorkspace)(resolvers),
                           TaskEither_.map(Option_.some),
-                        ),
+                        );
+                      },
                     ),
                   ),
               ),
@@ -120,10 +126,10 @@ export function processResult<
           return pipe(
             maybeSubResult,
             Option_.fold(
-              () => [connect(reporters)(false, subContext)],
+              () => [connect(reporters)(false, subContext, [])],
               (subResult) => [
-                connect(reporters)(true, subContext),
-                subProcessor(subResult)(subContext)(reporters),
+                connect(reporters)(true, subContext, []),
+                subProcessor(subResult)(subContext, [])(reporters),
               ],
             ),
           );
@@ -184,14 +190,16 @@ export function resultExamples<I extends Id<any>, SR extends Result<any>>(
 export const bundle = <
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<{ [WP in Exclude<string, keyof WX>]: any }>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   I extends Id<any>,
+  WX extends Workspace<object>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
-  seed: IdsBundleSeed<E, C, QA, RA, I, SQ, SR>,
-): IdsBundle<E, C, QA, RA, I, SQ, SR> =>
+  seed: IdsBundleSeed<E, C, W, QA, RA, I, WX, SQ, SR>,
+): IdsBundle<E, C, W, QA, RA, I, SQ, SR> =>
   protocol({
     Query: Dict(seed.id.Id, seed.item.Query),
     Result: Dict(seed.id.Id, tOption(seed.item.Result)),

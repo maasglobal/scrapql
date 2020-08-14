@@ -33,6 +33,7 @@ import {
   ResultPayloadCombiner,
   ResultProcessor,
   ResultReducer,
+  Workspace,
   examples,
   protocol,
 } from '../scrapql';
@@ -43,17 +44,21 @@ export function processQuery<
   Q extends LeafQuery<QP>,
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<any>,
   A extends Resolvers<any>,
   QP extends LeafQueryPayload<any>,
   RP extends LeafResultPayload<any>
 >(
-  connect: LeafResolverConnector<QP, RP, E, C, A>,
-): QueryProcessor<Q, LeafResult<QP, RP>, E, C, A> {
-  return ({ q }: Q) => (context: C): ReaderTaskEither<A, E, LeafResult<QP, RP>> => {
+  connect: LeafResolverConnector<QP, RP, E, C, W, A>,
+): QueryProcessor<Q, LeafResult<QP, RP>, E, C, W, A> {
+  return ({ q }: Q) => (
+    context: C,
+    workspace: W,
+  ): ReaderTaskEither<A, E, LeafResult<QP, RP>> => {
     return (resolvers) => {
       const resolver = connect(resolvers);
       return pipe(
-        resolver(q, context),
+        resolver(q, context, workspace),
         TaskEither_.map((r) => ({ q, r })),
       );
     };
@@ -73,7 +78,7 @@ export function processResult<
     return (reporters) => {
       const reporter = connect(reporters);
       const subContext = pipe(context, Onion_.prepend(q));
-      return reporter(r, subContext);
+      return reporter(r, subContext, []);
     };
   };
 }
@@ -133,13 +138,14 @@ export function resultExamples<
 export const bundle = <
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<any>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   QP extends LeafQueryPayload<any>,
   RP extends LeafResultPayload<any>
 >(
-  seed: LeafBundleSeed<E, C, QA, RA, QP, RP>,
-): LeafBundle<E, C, QA, RA, QP, RP> =>
+  seed: LeafBundleSeed<E, C, W, QA, RA, QP, RP>,
+): LeafBundle<E, C, W, QA, RA, QP, RP> =>
   protocol({
     Query: t.type({ q: seed.QueryPayload }),
     Result: t.type({ q: seed.QueryPayload, r: seed.ResultPayload }),

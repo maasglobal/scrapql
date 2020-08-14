@@ -25,6 +25,7 @@ import {
   Reporters,
   Resolvers,
   ResultProcessor,
+  Workspace,
   examples,
   protocol,
   structuralMismatch,
@@ -36,10 +37,11 @@ export function processQuery<
   Q extends LiteralQuery<QP>,
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<any>,
   A extends Resolvers<any>,
   QP extends LiteralQueryPayload<string>,
   RP extends LiteralResultPayload<string>
->(r: RP): QueryProcessor<Q, LiteralResult<QP, RP>, E, C, A> {
+>(r: RP): QueryProcessor<Q, LiteralResult<QP, RP>, E, C, W, A> {
   return ({ q }: Q) => (_context: C): ReaderTaskEither<A, E, LiteralResult<QP, RP>> => {
     return (_resolvers) => TaskEither_.right({ q, r });
   };
@@ -92,13 +94,14 @@ export function resultExamples<R extends LiteralResult<any, any>>(
 export const bundle = <
   E extends Err<any>,
   C extends Context,
+  W extends Workspace<any>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   QP extends LiteralQueryPayload<string>,
   RP extends LiteralResultPayload<string>
 >(
   seed: LiteralBundleSeed<E, QP, RP>,
-): LiteralBundle<E, C, QA, RA, QP, RP> =>
+): LiteralBundle<E, C, W, QA, RA, QP, RP> =>
   protocol({
     Query: t.type({ q: seed.QueryPayload }),
     Result: t.type({ q: seed.QueryPayload, r: seed.ResultPayload }),
