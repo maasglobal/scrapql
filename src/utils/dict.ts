@@ -15,8 +15,10 @@ import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { sequenceS } from 'fp-ts/lib/Apply';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-export const Dict = <KeyC extends t.Mixed, ValueC extends t.Mixed>(K: KeyC, V: ValueC) =>
-  t.array(t.tuple([K, V]));
+export const Dict = <KeyC extends t.Mixed, ValueC extends t.Mixed>(
+  K: KeyC,
+  V: ValueC,
+): t.ArrayC<t.TupleC<[KeyC, ValueC]>> => t.array(t.tuple([K, V]));
 export type Dict<K, V> = Array<[K, V]>;
 export const dict = <K, V>(...d: Dict<K, V>): Dict<K, V> => d;
 

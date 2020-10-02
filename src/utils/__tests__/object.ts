@@ -1,7 +1,7 @@
-import { mergeObject } from '../object';
+import { merge } from '../object';
 
 describe('object', () => {
-  it('mergeObject', () => {
+  it('merge', () => {
     const foo = 123 as const;
     const bar = 456 as const;
     const quux = 789 as const;
@@ -9,7 +9,7 @@ describe('object', () => {
     const a = { foo, bar };
     const b = { quux };
 
-    const ab = mergeObject(a, b);
+    const ab = merge(a, b);
 
     expect(ab).toMatchObject({ foo, bar, quux });
   });

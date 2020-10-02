@@ -16,14 +16,12 @@ import { array } from 'fp-ts/lib/Array';
 import { identity } from 'fp-ts/lib/function';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as Context_ from '../utils/onion';
+import * as Object_ from '../utils/object';
+import * as Tuple_ from '../utils/tuple';
 import * as Dict_ from '../utils/dict';
 import * as NonEmptyList_ from '../utils/non-empty-list';
-import * as Onion_ from '../utils/onion';
 import { Dict } from '../utils/dict';
-import { Prepend } from '../utils/onion';
 import { mergeOption } from '../utils/option';
-import { MergeObject, mergeObject } from '../utils/object';
 
 import {
   Context,
@@ -56,16 +54,16 @@ import {
 export function processQuery<
   Q extends IdsQuery<Dict<I, SQ>>,
   E extends Err<any>,
-  C extends Context,
-  W extends Workspace<object>,
+  C extends Context<Array<any>>,
+  W extends Workspace<Object_.Object>,
   A extends Resolvers<any>,
   I extends Id<any>,
-  WX extends Workspace<object>,
+  WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
   connect: ExistenceResolverConnector<I, Option<WX>, E, C, W, A>,
-  subProcessor: QueryProcessor<SQ, SR, E, Prepend<I, C>, MergeObject<W, WX>, A>,
+  subProcessor: QueryProcessor<SQ, SR, E, Tuple_.Prepend<I, C>, Object_.Merge<W, WX>, A>,
 ): QueryProcessor<Q, IdsResult<Dict<I, Option<SR>>>, E, C, W, A> {
   return (query: Q) => (
     context: C,
@@ -76,7 +74,7 @@ export function processQuery<
         query,
         Dict_.mapWithIndex(
           (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
-            const subContext = pipe(context, Context_.prepend(id));
+            const subContext = pipe(context, Tuple_.prepend(id));
             const existenceCheck = connect(resolvers);
             return pipe(
               existenceCheck(id, context, workspace),
@@ -87,7 +85,7 @@ export function processQuery<
                     Option_.fold(
                       () => TaskEither_.right(Option_.none),
                       (x) => {
-                        const subWorkspace = mergeObject(workspace, x);
+                        const subWorkspace = Object_.merge(workspace, x);
                         return pipe(
                           subProcessor(subQuery)(subContext, subWorkspace)(resolvers),
                           TaskEither_.map(Option_.some),
@@ -109,27 +107,27 @@ export function processQuery<
 
 export function processResult<
   R extends IdsResult<Dict<I, Option<SR>>>,
-  C extends Context,
+  C extends Context<Array<any>>,
   A extends Reporters<any>,
   I extends Id<any>,
   SR extends Result<any>
 >(
   connect: ExistenceReporterConnector<I, Existence, C, A>,
-  subProcessor: ResultProcessor<SR, Prepend<I, C>, A>,
+  subProcessor: ResultProcessor<SR, Tuple_.Prepend<I, C>, A>,
 ): ResultProcessor<R, C, A> {
   return (result: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
       const tasks: Array<Task<void>> = pipe(
         result,
         Dict_.mapWithIndex((id: I, maybeSubResult: Option<SR>) => {
-          const subContext = pipe(context, Onion_.prepend(id));
+          const subContext = pipe(context, Tuple_.prepend(id));
           return pipe(
             maybeSubResult,
             Option_.fold(
-              () => [connect(reporters)(false, subContext, [])],
+              () => [connect(reporters)(false, subContext, {})],
               (subResult) => [
-                connect(reporters)(true, subContext, []),
-                subProcessor(subResult)(subContext, [])(reporters),
+                connect(reporters)(true, subContext, {}),
+                subProcessor(subResult)(subContext, {})(reporters),
               ],
             ),
           );
@@ -189,12 +187,12 @@ export function resultExamples<I extends Id<any>, SR extends Result<any>>(
 
 export const bundle = <
   E extends Err<any>,
-  C extends Context,
-  W extends Workspace<{ [WP in Exclude<string, keyof WX>]: any }>,
+  C extends Context<Array<any>>,
+  W extends Workspace<Object_.Object>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   I extends Id<any>,
-  WX extends Workspace<object>,
+  WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(
