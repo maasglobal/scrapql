@@ -35,7 +35,7 @@ describe('Dict', () => {
     const result: Either<'error', Example> = pipe(
       NonEmptyArray_.cons(example1, [example2]),
       Dict_.mergeSymmetric(
-        () => 'error' as 'error',
+        () => 'error' as const,
         (valuevariants: NonEmptyArray<number>): Either<'error', number> =>
           pipe(
             valuevariants.reduce((a, b) => a + b),

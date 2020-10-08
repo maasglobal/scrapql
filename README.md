@@ -142,8 +142,8 @@ import * as scrapql from 'scrapql';
 import { Ctx } from 'scrapql';
 
 type Resolvers = scrapql.Resolvers<{
-  readonly fetchReport: (a: true, b: Ctx<Year>) => TaskEither<Errors, Report>;
-  readonly fetchCustomer: (a: true, b: Ctx<CustomerId>, c: { customer: Customer }) => TaskEither<Errors, Customer>;
+  readonly fetchReport: (a: true, b: Ctx<[Year]>) => TaskEither<Errors, Report>;
+  readonly fetchCustomer: (a: true, b: Ctx<[CustomerId]>, c: { customer: Customer }) => TaskEither<Errors, Customer>;
   readonly checkCustomerExistence: (a: CustomerId) => TaskEither<Errors, Option<{ customer: Customer }>>;
 }>
 
@@ -182,20 +182,20 @@ import { QueryProcessor, Ctx0 } from 'scrapql';
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
 // Ideally the type casts would be unnecessary, see https://github.com/maasglobal/scrapql/issues/12
-const processQuery: QueryProcessor<Query, Result, Errors, Ctx0, {}, Resolvers> = scrapql.properties.processQuery<Query, Errors, Ctx0, {}, Resolvers, Result>({
+const processQuery: QueryProcessor<Query, Result, Errors, Ctx0, scrapql.Object, Resolvers> = scrapql.properties.processQuery<Query, Errors, Ctx0, scrapql.Object, Resolvers, Result>({
   protocol: scrapql.literal.processQuery(RESULT_PROTOCOL),
     reports: scrapql.keys.processQuery(
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchReport)
-      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Report } }, Errors, Ctx<Year>, {}, Resolvers> ,
+      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Report } }, Errors, Ctx<[Year]>, scrapql.Object, Resolvers> ,
     ),
     customers: scrapql.ids.processQuery(
       (r: Resolvers) => r.checkCustomerExistence,
       scrapql.properties.processQuery({
         get: scrapql.leaf.processQuery((r: Resolvers) => r.fetchCustomer),
-      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Customer } }, Errors, Ctx<CustomerId>, { customer: Customer}, Resolvers>,
-    ) as QueryProcessor<Dict<CustomerId, { get: { q: true; } }>, Dict<CustomerId, Option<{ get: { q: true, r: Customer } }>>, Errors, Ctx0, {}, Resolvers>,
-  }) as QueryProcessor<Query, Result, Errors, Ctx0, {}, Resolvers>;
+      }) as QueryProcessor<{ get: { q: true } }, { get: { q: true, r: Customer } }, Errors, Ctx<[CustomerId]>, { customer: Customer}, Resolvers>,
+    ) as QueryProcessor<Dict<CustomerId, { get: { q: true; } }>, Dict<CustomerId, Option<{ get: { q: true, r: Customer } }>>, Errors, Ctx0, scrapql.Object, Resolvers>,
+  }) as QueryProcessor<Query, Result, Errors, Ctx0, scrapql.Object, Resolvers>;
 ```
 
 You can run the processor as follows.
@@ -288,7 +288,7 @@ It all comes together as the following query processor.
 
 ```typescript
 async function jsonQueryProcessor(jsonQuery: Json): Promise<Json> {
-  const qp = processorInstance(processQuery, ctx0, [], resolvers);
+  const qp = processorInstance(processQuery, ctx0, {}, resolvers);
   const q: Query = await validator(Query).decodePromise(jsonQuery);
   const r: Result = await ruins.fromTaskEither(qp(q));
   const jsonResult: Json = JSON.parse(JSON.stringify(Result.encode(r)));
@@ -304,9 +304,9 @@ import { Either } from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 
 type Reporters = scrapql.Reporters<{
-  readonly receiveReport: (a: Report, b: Ctx<true, Ctx<Year>> ) => Task<void>;
-  readonly receiveCustomer: (a: Option<Customer>, b: Ctx<true, Ctx<CustomerId>>) => Task<void>;
-  readonly learnCustomerExistence: (a: boolean, b: Ctx<CustomerId>) => Task<void>;
+  readonly receiveReport: (a: Report, b: Ctx<[true, Year]> ) => Task<void>;
+  readonly receiveCustomer: (a: Option<Customer>, b: Ctx<[true, CustomerId]>) => Task<void>;
+  readonly learnCustomerExistence: (a: boolean, b: Ctx<[CustomerId]>) => Task<void>;
 }>
 
 const reporters: Reporters = {
@@ -338,13 +338,13 @@ const processResult: ResultProcessor<Result, Ctx0, Reporters> = scrapql.properti
   reports: scrapql.keys.processResult(
     scrapql.properties.processResult({
       get: scrapql.leaf.processResult((r: Reporters) => r.receiveReport)
-    }) as ResultProcessor<{ get: { q: true, r: Report } }, Ctx<string>, Reporters>,
+    }) as ResultProcessor<{ get: { q: true, r: Report } }, Ctx<[string]>, Reporters>,
   ),
   customers: scrapql.ids.processResult(
     (r: Reporters) => r.learnCustomerExistence,
     scrapql.properties.processResult({
       get: scrapql.leaf.processResult((r: Reporters) => r.receiveCustomer)
-    }) as ResultProcessor<{ get: { q: true, r: Option<Customer> } }, Ctx<string>, Reporters>,
+    }) as ResultProcessor<{ get: { q: true, r: Option<Customer> } }, Ctx<[string]>, Reporters>,
   ),
 
 }) as ResultProcessor<Result, Ctx0, Reporters>;
@@ -363,7 +363,7 @@ type Protocol = Bundle<
   Result,
   Errors,
   Ctx0,
-  [],
+  scrapql.Object,
   Resolvers,
   Reporters
 >;
@@ -407,7 +407,7 @@ async function server(request: string): Promise<string> {
       TaskEither_.fromEither,
     )),
     TaskEither_.chain((query: Query) => pipe(
-      processorInstance(processQuery, ctx0, [], resolvers),
+      processorInstance(processQuery, ctx0, {}, resolvers),
       (qp) => qp(query),
     )),
     Task_.chainFirst((result: Either<Errors, Result>) => pipe(
@@ -459,7 +459,7 @@ async function client(query: Query): Promise<void> {
     TaskEither_.fold(
       (errors) => () => Promise.resolve(console.error(errors)),
       (result: Result) => pipe(
-        processorInstance( processResult, ctx0, [], reporters ),
+        processorInstance( processResult, ctx0, {}, reporters ),
         (rp) => rp(result),
       ),
     ),

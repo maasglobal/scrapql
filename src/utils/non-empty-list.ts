@@ -134,7 +134,12 @@ export function sequenceS<O extends Record<string, NonEmptyList<any>>>(
   },
 ): NonEmptyList<{ [I in keyof O]: O[I] extends NonEmptyList<infer A> ? A : never }> {
   return fromGenerator(function* () {
-    const [[firstKey, firstGen], ...more] = Object.entries(generators);
+    const [first, ...more] = Object.entries(generators);
+    if (typeof first === 'undefined') {
+      yield {};
+      return;
+    }
+    const [firstKey, firstGen] = first;
     if (more.length === 0) {
       const handle = firstGen();
       while (true) {

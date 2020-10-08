@@ -10,7 +10,7 @@ import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { pipe } from 'fp-ts/lib/pipeable';
 
-import * as Onion_ from '../utils/onion';
+import * as Tuple_ from '../utils/tuple';
 import * as NonEmptyList_ from '../utils/non-empty-list';
 
 import {
@@ -43,7 +43,7 @@ import {
 export function processQuery<
   Q extends LeafQuery<QP>,
   E extends Err<any>,
-  C extends Context,
+  C extends Context<Array<any>>,
   W extends Workspace<any>,
   A extends Resolvers<any>,
   QP extends LeafQueryPayload<any>,
@@ -69,7 +69,7 @@ export function processQuery<
 
 export function processResult<
   R extends LeafResult<QP, RP>,
-  C extends Context,
+  C extends Context<Array<any>>,
   A extends Reporters<any>,
   QP extends LeafQueryPayload<any>,
   RP extends LeafResultPayload<any>
@@ -77,8 +77,8 @@ export function processResult<
   return ({ q, r }: R) => (context: C): ReaderTask<A, void> => {
     return (reporters) => {
       const reporter = connect(reporters);
-      const subContext = pipe(context, Onion_.prepend(q));
-      return reporter(r, subContext, []);
+      const subContext = pipe(context, Tuple_.prepend(q));
+      return reporter(r, subContext, {});
     };
   };
 }
@@ -137,7 +137,7 @@ export function resultExamples<
 
 export const bundle = <
   E extends Err<any>,
-  C extends Context,
+  C extends Context<Array<any>>,
   W extends Workspace<any>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
