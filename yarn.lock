@@ -2222,10 +2222,10 @@ io-ts-types@^0.5.12:
   resolved "https://registry.yarnpkg.com/io-ts-types/-/io-ts-types-0.5.12.tgz#270487f6e0adfe0a597ca14e50fbab287e4bb266"
   integrity sha512-8IC96BJBTMeHFIikM3Mh5poyl2NA6pgF1ncWBktrpS1xfCdoRZQeSWPDcUaiR8T8jYWfAYOt/KEcIsw2e1fufw==
 
-io-ts-validator@^0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/io-ts-validator/-/io-ts-validator-0.0.2.tgz#f09f410cede6c2e5f85ce413d700d3c797f59c10"
-  integrity sha512-Udd62OMFGiRZxM9WNUIGYxVtyAsbqpAIu1b43W2x/ciItrmDb7JsSQmaHcDkpqshaA4SOe+cE2uoUfLJKK+WIA==
+io-ts-validator@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/io-ts-validator/-/io-ts-validator-0.0.4.tgz#acaf885c3b91e3bdc5d0f979ab53ab66460415e4"
+  integrity sha512-gzfft0cBH3TJv+KjrWONSjurVgh/jqPeUykn6dSoSNgyFO4shIXM5SLz6FgTsuadY0E5mvT1wLq3xiBPPTsNHg==
 
 io-ts@^2.2.13:
   version "2.2.13"
