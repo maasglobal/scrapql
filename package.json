@@ -51,6 +51,7 @@
     "io-ts-types": "^0.5.12",
     "io-ts-validator": "^0.0.4",
     "jest": "^26.0.1",
+    "maasglobal-prelude-ts": "^0.0.9",
     "monocle-ts": "^2.3.3",
     "newtype-ts": "^0.3.4",
     "prettier": "^2.1.2",

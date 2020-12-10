@@ -628,3 +628,29 @@ export type PropertiesBundle<O extends BundleMapping<any, any>> = Bundle<
   O extends Record<any, Bundle<any, any, any, any, any, infer QA, any>> ? QA : never,
   O extends Record<any, Bundle<any, any, any, any, any, any, infer RA>> ? RA : never
 >;
+
+export function processQuery<
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>
+>(
+  bundle: Bundle<Q, R, E, Ctx0, Wsp0, QA, RA>,
+  resolvers: QA,
+): QueryProcessorInstance<Q, R, E> {
+  return processorInstance(bundle.processQuery, ctx0, wsp0, resolvers);
+}
+
+export function processResult<
+  Q extends Query<any>,
+  R extends Result<any>,
+  E extends Err<any>,
+  QA extends Resolvers<any>,
+  RA extends Reporters<any>
+>(
+  bundle: Bundle<Q, R, E, Ctx0, Wsp0, QA, RA>,
+  reporters: RA,
+): ResultProcessorInstance<R> {
+  return processorInstance(bundle.processResult, ctx0, wsp0, reporters);
+}
