@@ -479,3 +479,31 @@ async function client(query: Query): Promise<void> {
   return ruins.fromTaskEither(main);
 }
 ```
+
+# Utilities
+
+The package also contains some utilities for related generic data structures.
+
+## Dict
+
+The scrapql dictionary type `Dict<K, V> = Array<[K, V]>` is similar to
+TypeScript's native record type `Record<K, V>` but accepts arbitrary
+values as keys. This is useful for scrapql since it allows us to use
+entire queries as keys while storing query results as values.
+The dictionary data structure is inspired by Haskell's
+[lookup](http://zvon.org/other/haskell/Outputprelude/lookup_f.html)
+function that is defined for a list of pairs. The related scrapql
+utility package is similar to fp-ts
+[Record](https://gcanti.github.io/fp-ts/modules/Record.ts.html) utils.
+
+## NonEmptyList
+
+The scrapql non-empty list type `NonEmptyList<A> = () => Generator<A, A, undefined>` is similar to
+TypeScript's native array type `Array<A>` and fp-ts non-empty array type `NonEmptyArray<A>` but
+generates values on demand. The lazy approach is useful while combining scrapql query and result
+examples. The lazy list lets us read a few example query combinations, letting us ignore the
+exponential amount of possible example combinations.
+The non-empty list data structure is inspired by Python's
+[itertools](https://docs.python.org/3/library/itertools.html) module.
+The related scrapql utility package is similar to fp-ts
+[NonEmptyArray](https://gcanti.github.io/fp-ts/modules/NonEmptyArray.ts.html) utils.
