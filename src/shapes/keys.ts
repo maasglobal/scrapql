@@ -94,12 +94,12 @@ export function processResult<
   };
 }
 
-export const reduceResult = <K extends Key<any>, SR extends Result<any>>(
+export const reduceResult = <K extends Key<string>, SR extends Result<any>>(
   reduceSubResult: ResultReducer<SR>,
 ): ResultReducer<KeysResult<Dict<K, SR>>> => (results) =>
   pipe(
     results,
-    Dict_.mergeSymmetric(
+    Dict_.mergeAsymmetric(
       () => structuralMismatch('key'),
       (subResultVariants: NonEmptyArray<SR>): Either<ReduceFailure, SR> =>
         reduceSubResult(subResultVariants),
@@ -134,7 +134,7 @@ export const bundle = <
   W extends Workspace<any>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
-  K extends Key<any>,
+  K extends Key<string>,
   SQ extends Query<any>,
   SR extends Result<any>
 >(

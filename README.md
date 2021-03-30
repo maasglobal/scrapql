@@ -46,7 +46,7 @@ type Json =
 
 interface Database {
   getCustomer: (c: string) => Promise<undefined|Json>;
-  getReport: (y: number) => Promise<Json>;
+  getReport: (y: string) => Promise<Json>;
 }
 
 const db: Database = {
@@ -69,7 +69,7 @@ const Customer = t.type({
 });
 type Customer = t.TypeOf<typeof Customer>;
 
-const Year = t.number;
+const Year = t.string;
 type Year = t.TypeOf<typeof Year>;
 
 const Report = t.type({
@@ -238,7 +238,7 @@ type Reports = scrapql.KeysBundle<
 const Reports: Reports = scrapql.keys.bundle({
   key: {
     Key: Year,
-    keyExamples: [1999, 2004],
+    keyExamples: ['1999', '2004'],
   },
   item: ReportOps,
 });
