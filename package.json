@@ -1,6 +1,6 @@
 {
   "name": "scrapql",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "",
   "repository": {
     "type": "git",
@@ -28,7 +28,8 @@
     "eslint": "eslint --max-warnings=0 '**/*.{ts,js,json}'",
     "lint": "yarn eslint",
     "ci": "yarn readme-ts && yarn lint && yarn typecheck && yarn test && yarn build",
-    "deploy-npm": "yarn ci && yarn publish --non-interactive"
+    "deploy-npm": "yarn ci && yarn publish --non-interactive",
+    "deploy-alpha": "yarn deploy-npm --tag alpha"
   },
   "peerDependencies": {
     "fp-ts": "^2.9.0",

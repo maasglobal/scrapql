@@ -1,6 +1,7 @@
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
+import { Eq } from 'fp-ts/lib/Eq';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
@@ -138,16 +139,18 @@ export function processResult<
 
 export const reduceResult = <
   T extends Terms<any>,
-  I extends Id<any>,
+  I extends Id<string>,
   SR extends Result<any>
 >(
+  termEq: Eq<T>,
   reduceSubResult: ResultReducer<SR>,
 ): ResultReducer<SearchResult<Dict<T, Dict<I, SR>>>> => (results) =>
   pipe(
     results,
     Dict_.mergeSymmetric(
+      termEq,
       () => structuralMismatch('terms'),
-      Dict_.mergeSymmetric(() => structuralMismatch('ids'), reduceSubResult),
+      Dict_.mergeAsymmetric(() => structuralMismatch('ids'), reduceSubResult),
     ),
   );
 
@@ -186,7 +189,7 @@ export const bundle = <
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   T extends Terms<any>,
-  I extends Id<any>,
+  I extends Id<string>,
   WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
   SR extends Result<any>
@@ -199,7 +202,7 @@ export const bundle = <
     Err: seed.item.Err,
     processQuery: processQuery(seed.queryConnector, seed.item.processQuery),
     processResult: processResult(seed.resultConnector, seed.item.processResult),
-    reduceResult: reduceResult(seed.item.reduceResult),
+    reduceResult: reduceResult(seed.terms.eq, seed.item.reduceResult),
     queryExamples: queryExamples(
       examples(seed.terms.termsExamples),
       seed.item.queryExamples,

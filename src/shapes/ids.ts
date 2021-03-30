@@ -140,12 +140,12 @@ export function processResult<
   };
 }
 
-export const reduceResult = <I extends Id<any>, SR extends Result<any>>(
+export const reduceResult = <I extends Id<string>, SR extends Result<any>>(
   reduceSubResult: ResultReducer<SR>,
 ): ResultReducer<IdsResult<Dict<I, Option<SR>>>> => (results) =>
   pipe(
     results,
-    Dict_.mergeSymmetric(
+    Dict_.mergeAsymmetric(
       () => structuralMismatch('id'),
       (subResultVariants: NonEmptyArray<Option<SR>>): Either<ReduceFailure, Option<SR>> =>
         pipe(
@@ -191,7 +191,7 @@ export const bundle = <
   W extends Workspace<Object_.Object>,
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
-  I extends Id<any>,
+  I extends Id<string>,
   WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
   SR extends Result<any>
