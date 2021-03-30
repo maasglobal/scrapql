@@ -1,6 +1,7 @@
 import * as t from 'io-ts';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { Option } from 'fp-ts/lib/Option';
+import { Eq } from 'fp-ts/lib/Eq';
 import { Either } from 'fp-ts/lib/Either';
 
 import { Prepend, Tuple, tuple } from './utils/tuple';
@@ -594,7 +595,7 @@ export type SearchBundleSeed<
   SQ extends Query<any>,
   SR extends Result<any>
 > = {
-  terms: { Terms: TermsCodec<T>; termsExamples: NonEmptyArray<T> };
+  terms: { Terms: TermsCodec<T>; termsExamples: NonEmptyArray<T>; eq: Eq<T> };
   id: { Id: IdCodec<I>; idExamples: NonEmptyArray<I> };
   item: Bundle<SQ, SR, E, Prepend<I, C>, Object_.Merge<W, WX>, QA, RA>;
   queryConnector: TermsResolverConnector<T, Dict<I, WX>, E, C, W, QA>;
