@@ -1,6 +1,6 @@
-import { pipe } from 'fp-ts/lib/pipeable';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
+import { pipe } from 'fp-ts/lib/pipeable';
 
 /* eslint-disable fp/no-let, fp/no-loops, fp/no-mutation, fp/no-throw */
 

@@ -1,15 +1,14 @@
-import * as t from 'io-ts';
+import { Either } from 'fp-ts/lib/Either';
+import { Eq } from 'fp-ts/lib/Eq';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { Option } from 'fp-ts/lib/Option';
-import { Eq } from 'fp-ts/lib/Eq';
-import { Either } from 'fp-ts/lib/Either';
+import * as t from 'io-ts';
 
-import { Prepend, Tuple, tuple } from './utils/tuple';
+import * as abstr from './types/abstract';
 import { Dict as _Dict, dict as _dict } from './utils/dict';
 import { NonEmptyList, nonEmptyList } from './utils/non-empty-list';
 import * as Object_ from './utils/object';
-
-import * as abstr from './types/abstract';
+import { Prepend, Tuple, tuple } from './utils/tuple';
 
 export * as ids from './shapes/ids';
 export * as keys from './shapes/keys';

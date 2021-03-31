@@ -1,11 +1,10 @@
-import * as ruins from 'ruins-ts';
-import { Task } from 'fp-ts/lib/Task';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
+import { Task } from 'fp-ts/lib/Task';
+import * as ruins from 'ruins-ts';
 
 import { name, version } from '../../package.json';
-
-import { Ctx, Ctx0, Dict, ctx, ctx0, dict, Wsp0, wsp0 } from '../scrapql';
+import { Ctx, ctx, Ctx0, ctx0, Dict, dict, Wsp0, wsp0 } from '../scrapql';
 import * as scrapql from '../scrapql';
 
 type Logger<R, A extends Array<any>> = {

@@ -1,6 +1,6 @@
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
-import { Option, None, Some } from 'fp-ts/lib/Option';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
+import { None, Option, Some } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/pipeable';
 

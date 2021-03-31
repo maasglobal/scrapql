@@ -1,29 +1,26 @@
 import * as Array_ from 'fp-ts/lib/Array';
-import * as Foldable_ from 'fp-ts/lib/Foldable';
+import { array } from 'fp-ts/lib/Array';
 import { Either } from 'fp-ts/lib/Either';
-import { TaskEither } from 'fp-ts/lib/TaskEither';
+import * as Foldable_ from 'fp-ts/lib/Foldable';
+import { identity } from 'fp-ts/lib/function';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
+import { pipe } from 'fp-ts/lib/pipeable';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
-import { array } from 'fp-ts/lib/Array';
-import { identity } from 'fp-ts/lib/function';
-import { pipe } from 'fp-ts/lib/pipeable';
-
-import * as Tuple_ from '../utils/tuple';
-import * as Dict_ from '../utils/dict';
-import * as NonEmptyList_ from '../utils/non-empty-list';
-import { Dict } from '../utils/dict';
+import { TaskEither } from 'fp-ts/lib/TaskEither';
 
 import {
   Context,
   Err,
   Examples,
+  examples,
   Key,
   KeysBundle,
   KeysBundleSeed,
   KeysQuery,
   KeysResult,
+  protocol,
   Query,
   QueryProcessor,
   ReduceFailure,
@@ -32,11 +29,13 @@ import {
   Result,
   ResultProcessor,
   ResultReducer,
-  Workspace,
-  examples,
-  protocol,
   structuralMismatch,
+  Workspace,
 } from '../scrapql';
+import * as Dict_ from '../utils/dict';
+import { Dict } from '../utils/dict';
+import * as NonEmptyList_ from '../utils/non-empty-list';
+import * as Tuple_ from '../utils/tuple';
 
 // keys query requests some information that is always present in database
 

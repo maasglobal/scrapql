@@ -1,20 +1,18 @@
-import * as ruins from 'ruins-ts';
-import { Task } from 'fp-ts/lib/Task';
-import { TaskEither } from 'fp-ts/lib/TaskEither';
+import * as Array_ from 'fp-ts/lib/Array';
 import { Either } from 'fp-ts/lib/Either';
 import * as Either_ from 'fp-ts/lib/Either';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
-import * as Array_ from 'fp-ts/lib/Array';
 import { pipe } from 'fp-ts/lib/pipeable';
+import { Task } from 'fp-ts/lib/Task';
+import { TaskEither } from 'fp-ts/lib/TaskEither';
+import * as ruins from 'ruins-ts';
 
 import { name, version } from '../../package.json';
-
-import { Workspace, Ctx, Ctx0, Dict, ctx, ctx0, Wsp0, wsp0, dict } from '../scrapql';
+import { Ctx, ctx, Ctx0, ctx0, Dict, dict, Workspace, Wsp0, wsp0 } from '../scrapql';
 import * as scrapql from '../scrapql';
-
-import * as Object_ from '../utils/object';
 import * as Dict_ from '../utils/dict';
+import * as Object_ from '../utils/object';
 
 type Logger<R, A extends Array<any>> = {
   (...a: A): R;

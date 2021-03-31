@@ -1,22 +1,20 @@
-import * as t from 'io-ts';
 import * as Apply_ from 'fp-ts/lib/Apply';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Either_ from 'fp-ts/lib/Either';
-import * as TaskEither_ from 'fp-ts/lib/TaskEither';
-import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { Either, either as Either__ } from 'fp-ts/lib/Either';
-import { ReaderTask } from 'fp-ts/lib/ReaderTask';
-import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
+import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { pipe } from 'fp-ts/lib/pipeable';
-
-import * as Tuple_ from '../utils/tuple';
-import * as NonEmptyList_ from '../utils/non-empty-list';
+import { ReaderTask } from 'fp-ts/lib/ReaderTask';
+import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
+import * as TaskEither_ from 'fp-ts/lib/TaskEither';
+import * as t from 'io-ts';
 
 import {
   Context,
   Err,
   Examples,
+  examples,
   LeafBundle,
   LeafBundleSeed,
   LeafQuery,
@@ -25,18 +23,19 @@ import {
   LeafResolverConnector,
   LeafResult,
   LeafResultPayload,
+  PayloadMismatch,
+  protocol,
   QueryPayloadCombiner,
   QueryProcessor,
-  PayloadMismatch,
   Reporters,
   Resolvers,
   ResultPayloadCombiner,
   ResultProcessor,
   ResultReducer,
   Workspace,
-  examples,
-  protocol,
 } from '../scrapql';
+import * as NonEmptyList_ from '../utils/non-empty-list';
+import * as Tuple_ from '../utils/tuple';
 
 // leaf query contains information for retrieving a payload
 
