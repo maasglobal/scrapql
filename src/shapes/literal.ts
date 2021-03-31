@@ -1,34 +1,34 @@
-import * as t from 'io-ts';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Either_ from 'fp-ts/lib/Either';
-import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
-import * as TaskEither_ from 'fp-ts/lib/TaskEither';
-import * as Task_ from 'fp-ts/lib/Task';
 import { Either } from 'fp-ts/lib/Either';
-import { ReaderTask } from 'fp-ts/lib/ReaderTask';
-import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
+import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import { pipe } from 'fp-ts/lib/pipeable';
+import { ReaderTask } from 'fp-ts/lib/ReaderTask';
+import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
+import * as Task_ from 'fp-ts/lib/Task';
+import * as TaskEither_ from 'fp-ts/lib/TaskEither';
+import * as t from 'io-ts';
 
 import {
   Context,
   Err,
   Examples,
+  examples,
   LiteralBundle,
   LiteralBundleSeed,
   LiteralQuery,
   LiteralQueryPayload,
   LiteralResult,
   LiteralResultPayload,
+  protocol,
   QueryProcessor,
   ReduceFailure,
   Reporters,
   Resolvers,
   ResultProcessor,
-  Workspace,
-  examples,
-  protocol,
   structuralMismatch,
+  Workspace,
 } from '../scrapql';
 
 // literal query contains static information that can be replaced with another literal

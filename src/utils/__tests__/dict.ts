@@ -1,8 +1,8 @@
+import { Either } from 'fp-ts/lib/Either';
+import * as Either_ from 'fp-ts/lib/Either';
 import { eqString } from 'fp-ts/lib/Eq';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
-import { Either } from 'fp-ts/lib/Either';
-import * as Either_ from 'fp-ts/lib/Either';
 import * as Option_ from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/pipeable';
 

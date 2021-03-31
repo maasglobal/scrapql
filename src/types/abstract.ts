@@ -1,5 +1,6 @@
-import { Task } from 'fp-ts/lib/Task';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
+import { Task } from 'fp-ts/lib/Task';
+
 import * as Object_ from '../utils/object';
 import { Tuple } from '../utils/tuple';
 

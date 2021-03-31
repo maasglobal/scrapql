@@ -1,26 +1,22 @@
 import * as Array_ from 'fp-ts/lib/Array';
-import * as Foldable_ from 'fp-ts/lib/Foldable';
-import * as TaskEither_ from 'fp-ts/lib/TaskEither';
+import { array } from 'fp-ts/lib/Array';
 import { Eq } from 'fp-ts/lib/Eq';
+import * as Foldable_ from 'fp-ts/lib/Foldable';
+import { identity } from 'fp-ts/lib/function';
+import { pipe } from 'fp-ts/lib/pipeable';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
+import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
-import { array } from 'fp-ts/lib/Array';
-import { identity } from 'fp-ts/lib/function';
-import { pipe } from 'fp-ts/lib/pipeable';
-
-import { Dict } from '../utils/dict';
-import * as Dict_ from '../utils/dict';
-import * as Tuple_ from '../utils/tuple';
-import * as NonEmptyList_ from '../utils/non-empty-list';
-import * as Object_ from '../utils/object';
 
 import {
   Context,
   Err,
   Examples,
+  examples,
   Id,
+  protocol,
   Query,
   QueryProcessor,
   Reporters,
@@ -32,14 +28,17 @@ import {
   SearchBundleSeed,
   SearchQuery,
   SearchResult,
+  structuralMismatch,
   Terms,
   TermsReporterConnector,
   TermsResolverConnector,
   Workspace,
-  structuralMismatch,
-  examples,
-  protocol,
 } from '../scrapql';
+import { Dict } from '../utils/dict';
+import * as Dict_ from '../utils/dict';
+import * as NonEmptyList_ from '../utils/non-empty-list';
+import * as Object_ from '../utils/object';
+import * as Tuple_ from '../utils/tuple';
 
 // search query requests some information that may zero or more instances in the database
 

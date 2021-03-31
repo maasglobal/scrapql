@@ -1,32 +1,26 @@
 import * as Array_ from 'fp-ts/lib/Array';
+import { array } from 'fp-ts/lib/Array';
 import * as Either_ from 'fp-ts/lib/Either';
-import * as Foldable_ from 'fp-ts/lib/Foldable';
-import * as Option_ from 'fp-ts/lib/Option';
-import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { Either, either } from 'fp-ts/lib/Either';
+import * as Foldable_ from 'fp-ts/lib/Foldable';
 import { flow } from 'fp-ts/lib/function';
+import { identity } from 'fp-ts/lib/function';
 import { NonEmptyArray, nonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
+import * as Option_ from 'fp-ts/lib/Option';
 import { Option, option } from 'fp-ts/lib/Option';
-import { option as tOption } from 'io-ts-types/lib/option';
+import { pipe } from 'fp-ts/lib/pipeable';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
+import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
-import { array } from 'fp-ts/lib/Array';
-import { identity } from 'fp-ts/lib/function';
-import { pipe } from 'fp-ts/lib/pipeable';
-
-import * as Object_ from '../utils/object';
-import * as Tuple_ from '../utils/tuple';
-import * as Dict_ from '../utils/dict';
-import * as NonEmptyList_ from '../utils/non-empty-list';
-import { Dict } from '../utils/dict';
-import { mergeOption } from '../utils/option';
+import { option as tOption } from 'io-ts-types/lib/option';
 
 import {
   Context,
   Err,
   Examples,
+  examples,
   Existence,
   ExistenceReporterConnector,
   ExistenceResolverConnector,
@@ -35,6 +29,7 @@ import {
   IdsBundleSeed,
   IdsQuery,
   IdsResult,
+  protocol,
   Query,
   QueryProcessor,
   ReduceFailure,
@@ -43,11 +38,15 @@ import {
   Result,
   ResultProcessor,
   ResultReducer,
-  Workspace,
-  examples,
-  protocol,
   structuralMismatch,
+  Workspace,
 } from '../scrapql';
+import * as Dict_ from '../utils/dict';
+import { Dict } from '../utils/dict';
+import * as NonEmptyList_ from '../utils/non-empty-list';
+import * as Object_ from '../utils/object';
+import { mergeOption } from '../utils/option';
+import * as Tuple_ from '../utils/tuple';
 
 // ids query requests some information that may not be present in database
 

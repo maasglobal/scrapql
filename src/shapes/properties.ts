@@ -1,20 +1,18 @@
-import * as t from 'io-ts';
 import * as Array_ from 'fp-ts/lib/Array';
-import * as Foldable_ from 'fp-ts/lib/Foldable';
-import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
-import * as Record_ from 'fp-ts/lib/Record';
-import * as Option_ from 'fp-ts/lib/Option';
+import { array } from 'fp-ts/lib/Array';
 import { Either, either } from 'fp-ts/lib/Either';
+import * as Foldable_ from 'fp-ts/lib/Foldable';
+import { identity } from 'fp-ts/lib/function';
+import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
+import * as Option_ from 'fp-ts/lib/Option';
+import { pipe } from 'fp-ts/lib/pipeable';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
+import * as Record_ from 'fp-ts/lib/Record';
 import { Task, taskSeq } from 'fp-ts/lib/Task';
 import { TaskEither, taskEither } from 'fp-ts/lib/TaskEither';
-import { array } from 'fp-ts/lib/Array';
-import { identity } from 'fp-ts/lib/function';
-import { pipe } from 'fp-ts/lib/pipeable';
-
-import * as NonEmptyList_ from '../utils/non-empty-list';
+import * as t from 'io-ts';
 
 import {
   BundleMapping,
@@ -27,6 +25,7 @@ import {
   PropertiesQuery,
   PropertiesResult,
   Property,
+  protocol,
   Query,
   QueryExamplesMapping,
   QueryProcessor,
@@ -41,8 +40,8 @@ import {
   ResultReducer,
   ResultReducerMapping,
   Workspace,
-  protocol,
 } from '../scrapql';
+import * as NonEmptyList_ from '../utils/non-empty-list';
 
 // properties query contains optional queries that may or may not be present
 

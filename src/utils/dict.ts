@@ -1,20 +1,19 @@
-import * as t from 'io-ts';
-
-import { Eq, eqString } from 'fp-ts/lib/Eq';
-import { Task, task } from 'fp-ts/lib/Task';
-import { TaskEither, taskEither } from 'fp-ts/lib/TaskEither';
-import { Either, either } from 'fp-ts/lib/Either';
-import { Option } from 'fp-ts/lib/Option';
 import { sequenceT } from 'fp-ts/lib/Apply';
+import { sequenceS } from 'fp-ts/lib/Apply';
 import { array } from 'fp-ts/lib/Array';
-import * as Option_ from 'fp-ts/lib/Option';
-import * as Either_ from 'fp-ts/lib/Either';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as boolean_ from 'fp-ts/lib/boolean';
+import { Either, either } from 'fp-ts/lib/Either';
+import * as Either_ from 'fp-ts/lib/Either';
+import { Eq, eqString } from 'fp-ts/lib/Eq';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
-import { sequenceS } from 'fp-ts/lib/Apply';
+import { Option } from 'fp-ts/lib/Option';
+import * as Option_ from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/pipeable';
+import { Task, task } from 'fp-ts/lib/Task';
+import { TaskEither, taskEither } from 'fp-ts/lib/TaskEither';
+import * as t from 'io-ts';
 
 export const Dict = <KeyC extends t.Mixed, ValueC extends t.Mixed>(
   K: KeyC,
