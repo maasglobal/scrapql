@@ -70,38 +70,125 @@ describe('Dict', () => {
     ]);
   });
 
-  it('sortAndTranspose helper', () => {
-    expect(
-      rewireDict
-        .sortAndTranspose([
-          [
-            ['a', 1],
-            ['b', 2],
-            ['d', 3],
-          ],
-          [
-            ['b', 5],
-            ['c', 6],
-            ['d', 7],
-            ['a', 4],
-          ],
-        ])
-        .sort(),
-    ).toMatchObject([
-      [
-        ['a', 1],
-        ['a', 4],
-      ],
-      [
-        ['b', 2],
-        ['b', 5],
-      ],
-      [['c', 6]],
-      [
-        ['d', 3],
-        ['d', 7],
-      ],
-    ]);
+  describe('sortAndTranspose helper', () => {
+    it('should work on sorted input', () => {
+      expect(
+        rewireDict
+          .sortAndTranspose([
+            [
+              ['a', 1],
+              ['b', 2],
+              ['c', 3],
+            ],
+            [
+              ['a', 4],
+              ['b', 5],
+              ['c', 6],
+            ],
+          ])
+          .sort(),
+      ).toMatchObject([
+        [
+          ['a', 1],
+          ['a', 4],
+        ],
+        [
+          ['b', 2],
+          ['b', 5],
+        ],
+        [
+          ['c', 3],
+          ['c', 6],
+        ],
+      ]);
+    });
+
+    it('should work on unsorted input', () => {
+      expect(
+        rewireDict
+          .sortAndTranspose([
+            [
+              ['a', 1],
+              ['c', 3],
+              ['b', 2],
+            ],
+            [
+              ['b', 5],
+              ['c', 6],
+              ['a', 4],
+            ],
+          ])
+          .sort(),
+      ).toMatchObject([
+        [
+          ['a', 1],
+          ['a', 4],
+        ],
+        [
+          ['b', 2],
+          ['b', 5],
+        ],
+        [
+          ['c', 3],
+          ['c', 6],
+        ],
+      ]);
+    });
+
+    it('should support addition', () => {
+      expect(
+        rewireDict
+          .sortAndTranspose([
+            [
+              ['a', 1],
+              ['c', 3],
+            ],
+            [
+              ['a', 4],
+              ['b', 5],
+              ['c', 6],
+            ],
+          ])
+          .sort(),
+      ).toMatchObject([
+        [
+          ['a', 1],
+          ['a', 4],
+        ],
+        [['b', 5]],
+        [
+          ['c', 3],
+          ['c', 6],
+        ],
+      ]);
+    });
+
+    it('should support substraction', () => {
+      expect(
+        rewireDict
+          .sortAndTranspose([
+            [
+              ['a', 1],
+              ['b', 2],
+              ['c', 3],
+            ],
+            [
+              ['a', 4],
+              ['c', 6],
+            ],
+          ])
+          .sort(),
+      ).toMatchObject([
+        [
+          ['a', 1],
+          ['a', 4],
+        ],
+        [
+          ['c', 3],
+          ['c', 6],
+        ],
+      ]);
+    });
   });
 
   describe('mergeSymmetric', () => {
@@ -186,8 +273,8 @@ describe('Dict', () => {
 
   it('mergeAsymmetric', () => {
     type Example = Dict<string, number>;
-    const example1: Example = Dict_.dict(['foo', 1], ['bar', 2]);
-    const example2: Example = Dict_.dict(['bar', 4], ['foo', 3]);
+    const example1: Example = Dict_.dict(['foo', 1], ['bar', 2], ['del', 5]);
+    const example2: Example = Dict_.dict(['bar', 4], ['foo', 3], ['add', 8]);
 
     const result: Either<'error', Example> = pipe(
       NonEmptyArray_.cons(example1, [example2]),
@@ -200,6 +287,8 @@ describe('Dict', () => {
           ),
       ),
     );
-    expect(result).toMatchObject(Either_.right(Dict_.dict(['foo', 4], ['bar', 6])));
+    expect(result).toMatchObject(
+      Either_.right(Dict_.dict(['foo', 4], ['bar', 6], ['add', 8])),
+    );
   });
 });

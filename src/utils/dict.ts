@@ -132,34 +132,30 @@ export function transpose<A>(xy: Array<Array<A>>): Array<NonEmptyArray<A>> {
 }
 
 const mergeTransposed = <E, K, A, B>(
-  variantCount: number,
   eq: Eq<K>,
   keyMismatch: () => E,
   reduceValues: (vs: NonEmptyArray<A>) => Either<E, B>,
 ) => (dicts: Array<NonEmptyArray<[K, A]>>): Either<E, Dict<K, B>> =>
   pipe(
     dicts,
-    Array_.map(
-      (variants: NonEmptyArray<[K, A]>): Either<E, [K, B]> =>
-        variants.length !== variantCount
-          ? Either_.left(keyMismatch())
-          : pipe(
-              {
-                k: pipe(
-                  variants,
-                  NonEmptyArray_.map(([k, _v]) => k),
-                  reduceDuplicateKeys(eq),
-                  Either_.fromOption(keyMismatch),
-                ),
-                v: pipe(
-                  variants,
-                  NonEmptyArray_.map(([_k, v]) => v),
-                  reduceValues,
-                ),
-              },
-              sequenceS(either),
-              Either_.map(({ k, v }) => [k, v]),
-            ),
+    Array_.map((variants) =>
+      pipe(
+        {
+          k: pipe(
+            variants,
+            NonEmptyArray_.map(([k, _a]) => k),
+            reduceDuplicateKeys(eq),
+            Either_.fromOption(keyMismatch),
+          ),
+          b: pipe(
+            variants,
+            NonEmptyArray_.map(([_k, a]) => a),
+            reduceValues,
+          ),
+        },
+        sequenceS(either),
+        Either_.map(({ k, b }): [K, B] => [k, b]),
+      ),
     ),
     array.sequence(either),
   );
@@ -168,21 +164,30 @@ export const mergeSymmetric = <E, K, A, B>(
   eq: Eq<K>,
   keyMismatch: () => E,
   reduceValues: (vs: NonEmptyArray<A>) => Either<E, B>,
-) => (dicts: NonEmptyArray<Dict<K, A>>): Either<E, Dict<K, B>> =>
-  pipe(transpose(dicts), mergeTransposed(dicts.length, eq, keyMismatch, reduceValues));
+) => (dicts: NonEmptyArray<Dict<K, A>>): Either<E, Dict<K, B>> => {
+  const transposed = transpose(dicts);
+  if (transposed.some((variants) => variants.length !== dicts.length)) {
+    return Either_.left(keyMismatch());
+  }
+  return pipe(transposed, mergeTransposed(eq, keyMismatch, reduceValues));
+};
 
 function sortAndTranspose<K extends string, A>(
   dicts: NonEmptyArray<Array<[K, A]>>,
 ): Array<NonEmptyArray<[K, A]>> {
-  const tmp: any = {} as any;
+  const lastDict = Object.fromEntries(NonEmptyArray_.last(dicts));
+
+  const tmp: Record<string, NonEmptyArray<[K, A]>> = {};
   dicts.forEach((dict) =>
     dict.forEach((ka) => {
-      const [k] = ka;
-      const values = tmp[k];
-      if (values) {
-        values.push(ka);
-      } else {
-        tmp[k] = [ka];
+      const [key] = ka;
+      if (lastDict.hasOwnProperty(key)) {
+        const values = tmp[key];
+        if (values) {
+          values.push(ka);
+        } else {
+          tmp[key] = [ka];
+        }
       }
     }),
   );
@@ -195,7 +200,7 @@ export const mergeAsymmetric = <E, K extends string, A, B>(
 ) => (dicts: NonEmptyArray<Dict<K, A>>): Either<E, Dict<K, B>> =>
   pipe(
     sortAndTranspose(dicts),
-    mergeTransposed(dicts.length, eqString as Eq<K>, keyMismatch, reduceValues),
+    mergeTransposed(eqString as Eq<K>, keyMismatch, reduceValues),
   );
 
 export const rewireDict = {
