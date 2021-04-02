@@ -5,7 +5,7 @@ import * as Array_ from 'fp-ts/lib/Array';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import { Either, either } from 'fp-ts/lib/Either';
 import * as Either_ from 'fp-ts/lib/Either';
-import { Eq, eqString } from 'fp-ts/lib/Eq';
+import { Eq } from 'fp-ts/lib/Eq';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { Option } from 'fp-ts/lib/Option';
@@ -131,29 +131,14 @@ export function transpose<A>(xy: Array<Array<A>>): Array<NonEmptyArray<A>> {
 }
 
 const mergeTransposed = <E, K, A, B>(
-  eq: Eq<K>,
-  keyMismatch: () => E,
   reduceValues: (vs: NonEmptyArray<A>) => Either<E, B>,
-) => (dicts: Array<NonEmptyArray<[K, A]>>): Either<E, Dict<K, B>> =>
+) => (dicts: Dict<K, NonEmptyArray<A>>): Either<E, Dict<K, B>> =>
   pipe(
     dicts,
-    Array_.map((variants) =>
+    Array_.map(([key, variants]) =>
       pipe(
-        {
-          k: pipe(
-            variants,
-            NonEmptyArray_.map(([k, _a]) => k),
-            reduceDuplicateKeys(eq),
-            Either_.fromOption(keyMismatch),
-          ),
-          b: pipe(
-            variants,
-            NonEmptyArray_.map(([_k, a]) => a),
-            reduceValues,
-          ),
-        },
-        sequenceS(either),
-        Either_.map(({ k, b }): [K, B] => [k, b]),
+        reduceValues(variants),
+        Either_.map((b): [K, B] => [key, b]),
       ),
     ),
     array.sequence(either),
@@ -168,39 +153,57 @@ export const mergeSymmetric = <E, K, A, B>(
   if (transposed.some((variants) => variants.length !== dicts.length)) {
     return Either_.left(keyMismatch());
   }
-  return pipe(transposed, mergeTransposed(eq, keyMismatch, reduceValues));
+  return pipe(
+    transposed,
+    Array_.map((variants) =>
+      pipe(
+        {
+          k: pipe(
+            variants,
+            NonEmptyArray_.map(([k, _a]) => k),
+            reduceDuplicateKeys(eq),
+            Either_.fromOption(keyMismatch),
+          ),
+          az: pipe(
+            variants,
+            NonEmptyArray_.map(([_k, a]) => a),
+            Either_.right,
+          ),
+        },
+        sequenceS(either),
+        Either_.map(({ k, az }): [K, NonEmptyArray<A>] => [k, az]),
+      ),
+    ),
+    array.sequence(either),
+    Either_.chain(mergeTransposed(reduceValues)),
+  );
 };
 
 function sortAndTranspose<K extends string, A>(
-  dicts: NonEmptyArray<Array<[K, A]>>,
-): Array<NonEmptyArray<[K, A]>> {
+  dicts: NonEmptyArray<Dict<K, A>>,
+): Dict<K, NonEmptyArray<A>> {
   const lastDict = Object.fromEntries(NonEmptyArray_.last(dicts));
 
-  const tmp: Record<string, NonEmptyArray<[K, A]>> = {};
+  const tmp: Record<string, NonEmptyArray<A>> = {};
   dicts.forEach((dict) =>
-    dict.forEach((ka) => {
-      const [key] = ka;
-      if (lastDict.hasOwnProperty(key)) {
-        const values = tmp[key];
+    dict.forEach(([k, a]) => {
+      if (lastDict.hasOwnProperty(k)) {
+        const values = tmp[k];
         if (values) {
-          values.push(ka);
+          values.push(a);
         } else {
-          tmp[key] = [ka];
+          tmp[k] = [a];
         }
       }
     }),
   );
-  return Object.values(tmp);
+  return Object.entries(tmp) as Dict<K, NonEmptyArray<A>>;
 }
 
 export const mergeAsymmetric = <E, K extends string, A, B>(
-  keyMismatch: () => E,
   reduceValues: (vs: NonEmptyArray<A>) => Either<E, B>,
 ) => (dicts: NonEmptyArray<Dict<K, A>>): Either<E, Dict<K, B>> =>
-  pipe(
-    sortAndTranspose(dicts),
-    mergeTransposed(eqString as Eq<K>, keyMismatch, reduceValues),
-  );
+  pipe(sortAndTranspose(dicts), mergeTransposed(reduceValues));
 
 export const rewireDict = {
   reduceDuplicateKeys,

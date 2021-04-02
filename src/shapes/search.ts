@@ -149,7 +149,7 @@ export const reduceResult = <
     Dict_.mergeSymmetric(
       termEq,
       () => structuralMismatch('terms'),
-      Dict_.mergeAsymmetric(() => structuralMismatch('ids'), reduceSubResult),
+      Dict_.mergeAsymmetric(reduceSubResult),
     ),
   );
 

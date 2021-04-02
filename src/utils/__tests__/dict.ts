@@ -88,18 +88,9 @@ describe('Dict', () => {
           ])
           .sort(),
       ).toMatchObject([
-        [
-          ['a', 1],
-          ['a', 4],
-        ],
-        [
-          ['b', 2],
-          ['b', 5],
-        ],
-        [
-          ['c', 3],
-          ['c', 6],
-        ],
+        ['a', [1, 4]],
+        ['b', [2, 5]],
+        ['c', [3, 6]],
       ]);
     });
 
@@ -120,18 +111,9 @@ describe('Dict', () => {
           ])
           .sort(),
       ).toMatchObject([
-        [
-          ['a', 1],
-          ['a', 4],
-        ],
-        [
-          ['b', 2],
-          ['b', 5],
-        ],
-        [
-          ['c', 3],
-          ['c', 6],
-        ],
+        ['a', [1, 4]],
+        ['b', [2, 5]],
+        ['c', [3, 6]],
       ]);
     });
 
@@ -151,15 +133,9 @@ describe('Dict', () => {
           ])
           .sort(),
       ).toMatchObject([
-        [
-          ['a', 1],
-          ['a', 4],
-        ],
-        [['b', 5]],
-        [
-          ['c', 3],
-          ['c', 6],
-        ],
+        ['a', [1, 4]],
+        ['b', [5]],
+        ['c', [3, 6]],
       ]);
     });
 
@@ -179,14 +155,8 @@ describe('Dict', () => {
           ])
           .sort(),
       ).toMatchObject([
-        [
-          ['a', 1],
-          ['a', 4],
-        ],
-        [
-          ['c', 3],
-          ['c', 6],
-        ],
+        ['a', [1, 4]],
+        ['c', [3, 6]],
       ]);
     });
   });
@@ -279,7 +249,6 @@ describe('Dict', () => {
     const result: Either<'error', Example> = pipe(
       NonEmptyArray_.cons(example1, [example2]),
       Dict_.mergeAsymmetric(
-        () => 'error' as const,
         (valuevariants: NonEmptyArray<number>): Either<'error', number> =>
           pipe(
             valuevariants.reduce((a, b) => a + b),

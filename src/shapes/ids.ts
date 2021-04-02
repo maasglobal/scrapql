@@ -145,7 +145,6 @@ export const reduceResult = <I extends Id<string>, SR extends Result<any>>(
   pipe(
     results,
     Dict_.mergeAsymmetric(
-      () => structuralMismatch('id'),
       (subResultVariants: NonEmptyArray<Option<SR>>): Either<ReduceFailure, Option<SR>> =>
         pipe(
           mergeOption(subResultVariants),
