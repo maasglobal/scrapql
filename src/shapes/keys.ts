@@ -29,7 +29,6 @@ import {
   Result,
   ResultProcessor,
   ResultReducer,
-  structuralMismatch,
   Workspace,
 } from '../scrapql';
 import * as Dict_ from '../utils/dict';
@@ -99,7 +98,6 @@ export const reduceResult = <K extends Key<string>, SR extends Result<any>>(
   pipe(
     results,
     Dict_.mergeAsymmetric(
-      () => structuralMismatch('key'),
       (subResultVariants: NonEmptyArray<SR>): Either<ReduceFailure, SR> =>
         reduceSubResult(subResultVariants),
     ),
