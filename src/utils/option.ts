@@ -11,7 +11,7 @@ export const isAllNone = <T>(
 
 export const isAllSome = <T>(
   options: NonEmptyArray<Option<T>>,
-): options is NonEmptyArray<None> =>
+): options is NonEmptyArray<Some<T>> =>
   pipe(options, NonEmptyArray_.filter(Option_.isNone), Option_.isNone);
 
 //: Either<E, NonEmptyArray<None> | NonEmptyArray<Some<SR>>>
