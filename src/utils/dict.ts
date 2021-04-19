@@ -1,18 +1,19 @@
 import { sequenceT } from 'fp-ts/lib/Apply';
 import { sequenceS } from 'fp-ts/lib/Apply';
-import { array } from 'fp-ts/lib/Array';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as boolean_ from 'fp-ts/lib/boolean';
-import { Either, either } from 'fp-ts/lib/Either';
+import { Either } from 'fp-ts/lib/Either';
 import * as Either_ from 'fp-ts/lib/Either';
 import { Eq } from 'fp-ts/lib/Eq';
+import { pipe } from 'fp-ts/lib/function';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/lib/pipeable';
-import { Task, task } from 'fp-ts/lib/Task';
-import { TaskEither, taskEither } from 'fp-ts/lib/TaskEither';
+import { Task } from 'fp-ts/lib/Task';
+import * as Task_ from 'fp-ts/lib/Task';
+import { TaskEither } from 'fp-ts/lib/TaskEither';
+import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import * as t from 'io-ts';
 
 export const Dict = <KeyC extends t.Mixed, ValueC extends t.Mixed>(
@@ -33,33 +34,37 @@ export function mapWithIndex<K, A, B>(
 }
 
 export function sequenceKVTask<K, V>([k, v]: [K, Task<V>]): Task<[K, V]> {
-  return sequenceT(task)(task.of(k), v);
+  return sequenceT(Task_.ApplyPar)(Task_.of(k), v);
 }
 
 export function sequenceTask<K, V>(dict: Dict<K, Task<V>>): Task<Dict<K, V>> {
-  return pipe(dict, Array_.map(sequenceKVTask), array.sequence(task));
+  return pipe(dict, Array_.map(sequenceKVTask), Array_.sequence(Task_.ApplicativePar));
 }
 
 export function sequenceKVEither<K, V, E>([k, v]: [K, Either<E, V>]): Either<E, [K, V]> {
-  return sequenceT(either)(either.of(k), v);
+  return sequenceT(Either_.Apply)(Either_.of(k), v);
 }
 
 export function sequenceEither<K, V, E>(
   dict: Dict<K, Either<E, V>>,
 ): Either<E, Dict<K, V>> {
-  return pipe(dict, Array_.map(sequenceKVEither), array.sequence(either));
+  return pipe(dict, Array_.map(sequenceKVEither), Array_.sequence(Either_.Applicative));
 }
 
 export function sequenceKVTaskEither<K, E, V>([k, v]: [K, TaskEither<E, V>]): TaskEither<
   E,
   [K, V]
 > {
-  return sequenceT(taskEither)(taskEither.of(k), v);
+  return sequenceT(TaskEither_.ApplyPar)(TaskEither_.of(k), v);
 }
 export function sequenceTaskEither<K, E, V>(
   dict: Dict<K, TaskEither<E, V>>,
 ): TaskEither<E, Dict<K, V>> {
-  return pipe(dict, Array_.map(sequenceKVTaskEither), array.sequence(taskEither));
+  return pipe(
+    dict,
+    Array_.map(sequenceKVTaskEither),
+    Array_.sequence(TaskEither_.ApplicativePar),
+  );
 }
 
 export function lookup<K>(k: K) {
@@ -141,7 +146,7 @@ const mergeTransposed = <E, K, A, B>(
         Either_.map((b): [K, B] => [key, b]),
       ),
     ),
-    array.sequence(either),
+    Array_.sequence(Either_.Applicative),
   );
 
 export const mergeSymmetric = <E, K, A, B>(
@@ -170,11 +175,11 @@ export const mergeSymmetric = <E, K, A, B>(
             Either_.right,
           ),
         },
-        sequenceS(either),
+        sequenceS(Either_.Apply),
         Either_.map(({ k, az }): [K, NonEmptyArray<A>] => [k, az]),
       ),
     ),
-    array.sequence(either),
+    Array_.sequence(Either_.Applicative),
     Either_.chain(mergeTransposed(reduceValues)),
   );
 };

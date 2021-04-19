@@ -1,9 +1,9 @@
 import * as Array_ from 'fp-ts/lib/Array';
 import { Either } from 'fp-ts/lib/Either';
 import * as Either_ from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/function';
 import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/lib/pipeable';
 import { Task } from 'fp-ts/lib/Task';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
 import * as ruins from 'ruins-ts';
