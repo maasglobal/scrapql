@@ -1,10 +1,10 @@
 import * as Apply_ from 'fp-ts/lib/Apply';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as Either_ from 'fp-ts/lib/Either';
-import { Either, either as Either__ } from 'fp-ts/lib/Either';
+import { Either } from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/function';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
-import { pipe } from 'fp-ts/lib/pipeable';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
@@ -99,7 +99,7 @@ export const reduceResult = <
         q: combineLeafQueryPayload(qw, qr),
         r: combineLeafResultPayload(rw, rr),
       },
-      Apply_.sequenceS(Either__),
+      Apply_.sequenceS(Either_.Apply),
     );
   const writeResult: R = NonEmptyArray_.head(results);
   const readResult: Array<R> = NonEmptyArray_.tail(results);

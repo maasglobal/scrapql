@@ -1,17 +1,19 @@
 import * as Array_ from 'fp-ts/lib/Array';
-import { array } from 'fp-ts/lib/Array';
-import { Either, either } from 'fp-ts/lib/Either';
+import { Either } from 'fp-ts/lib/Either';
+import * as Either_ from 'fp-ts/lib/Either';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import { identity } from 'fp-ts/lib/function';
+import { pipe } from 'fp-ts/lib/function';
 import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
 import * as Option_ from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/lib/pipeable';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import * as Record_ from 'fp-ts/lib/Record';
-import { Task, taskSeq } from 'fp-ts/lib/Task';
-import { TaskEither, taskEither } from 'fp-ts/lib/TaskEither';
+import { Task } from 'fp-ts/lib/Task';
+import * as Task_ from 'fp-ts/lib/Task';
+import { TaskEither } from 'fp-ts/lib/TaskEither';
+import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import * as t from 'io-ts';
 
 import {
@@ -66,7 +68,9 @@ export function processQuery<
           return subResult;
         }),
       );
-      const result: TaskEither<E, Record<P, R[P]>> = Record_.sequence(taskEither)(tasks);
+      const result: TaskEither<E, Record<P, R[P]>> = Record_.sequence(
+        TaskEither_.ApplicativePar,
+      )(tasks);
 
       return result as TaskEither<E, R>;
     };
@@ -93,10 +97,10 @@ export function processResult<
       );
       const tasks: Array<Task<void>> = pipe(
         taskRecord,
-        Record_.toUnfoldable(array),
+        Record_.toUnfoldable(Array_.Unfoldable),
         Array_.map(([_k, v]) => v),
       );
-      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+      return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(tasks, identity);
     };
   };
 }
@@ -119,7 +123,7 @@ export const reduceResult = <R extends PropertiesResult<any>>(
         );
       },
     ),
-    Record_.sequence(either),
+    Record_.sequence(Either_.Applicative),
   );
   return result as Either<ReduceFailure, R>;
 };

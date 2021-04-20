@@ -1,12 +1,12 @@
 import * as Array_ from 'fp-ts/lib/Array';
-import { array } from 'fp-ts/lib/Array';
 import { Eq } from 'fp-ts/lib/Eq';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import { identity } from 'fp-ts/lib/function';
-import { pipe } from 'fp-ts/lib/pipeable';
+import { pipe } from 'fp-ts/lib/function';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
-import { Task, taskSeq } from 'fp-ts/lib/Task';
+import { Task } from 'fp-ts/lib/Task';
+import * as Task_ from 'fp-ts/lib/Task';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
 
@@ -131,7 +131,7 @@ export function processResult<
         Array_.map(([_k, v]) => v),
         Array_.flatten,
       );
-      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+      return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(tasks, identity);
     };
   };
 }

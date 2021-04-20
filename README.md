@@ -303,7 +303,7 @@ const resolvers: Resolvers = {
       P.Option_.fromNullable(nullable),
       P.Option_.map(validator(Customer).decodeEither),
       P.Option_.map(P.Either_.map((customer) => ({ customer }))),
-      P.Option_.sequence(P.Either_.either),
+      P.Option_.sequence(P.Either_.Applicative),
     )),
   ),
 

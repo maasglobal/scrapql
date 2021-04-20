@@ -1,17 +1,18 @@
 import * as Array_ from 'fp-ts/lib/Array';
-import { array } from 'fp-ts/lib/Array';
 import * as Either_ from 'fp-ts/lib/Either';
-import { Either, either } from 'fp-ts/lib/Either';
+import { Either } from 'fp-ts/lib/Either';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
 import { flow } from 'fp-ts/lib/function';
 import { identity } from 'fp-ts/lib/function';
-import { NonEmptyArray, nonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
+import { pipe } from 'fp-ts/lib/function';
+import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
+import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
+import { Option } from 'fp-ts/lib/Option';
 import * as Option_ from 'fp-ts/lib/Option';
-import { Option, option } from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/lib/pipeable';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
-import { Task, taskSeq } from 'fp-ts/lib/Task';
+import { Task } from 'fp-ts/lib/Task';
+import * as Task_ from 'fp-ts/lib/Task';
 import * as TaskEither_ from 'fp-ts/lib/TaskEither';
 import { TaskEither } from 'fp-ts/lib/TaskEither';
 import { option as tOption } from 'io-ts-types/lib/option';
@@ -134,7 +135,7 @@ export function processResult<
         Array_.map(([_k, v]) => v),
         Array_.flatten,
       );
-      return Foldable_.traverse_(taskSeq, array)(tasks, identity);
+      return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(tasks, identity);
     };
   };
 }
@@ -151,9 +152,9 @@ export const reduceResult = <I extends Id<string>, SR extends Result<any>>(
           Either_.fromOption(() => structuralMismatch('option')),
           Either_.chain(
             flow(
-              nonEmptyArray.sequence(option),
+              NonEmptyArray_.sequence(Option_.Applicative),
               Option_.map((subResultVariants) => reduceSubResult(subResultVariants)),
-              option.sequence(either),
+              Option_.sequence(Either_.Applicative),
             ),
           ),
         ),

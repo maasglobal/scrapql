@@ -1,23 +1,23 @@
+import * as Array_ from 'fp-ts/lib/Array';
 import { Either } from 'fp-ts/lib/Either';
 import * as Either_ from 'fp-ts/lib/Either';
-import { eqString } from 'fp-ts/lib/Eq';
+import { pipe } from 'fp-ts/lib/function';
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray';
-import * as NonEmptyArray_ from 'fp-ts/lib/NonEmptyArray';
 import * as Option_ from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/lib/pipeable';
+import * as string_ from 'fp-ts/lib/string';
 
 import * as Dict_ from '../dict';
 import { Dict, rewireDict } from '../dict';
 
 describe('Dict', () => {
   it('reduceDuplicateKeys helper', () => {
-    expect(pipe(['a', 'a', 'a'], rewireDict.reduceDuplicateKeys(eqString))).toMatchObject(
-      Option_.some('a'),
-    );
+    expect(
+      pipe(['a', 'a', 'a'], rewireDict.reduceDuplicateKeys(string_.Eq)),
+    ).toMatchObject(Option_.some('a'));
 
-    expect(pipe(['a', 'b', 'c'], rewireDict.reduceDuplicateKeys(eqString))).toMatchObject(
-      Option_.none,
-    );
+    expect(
+      pipe(['a', 'b', 'c'], rewireDict.reduceDuplicateKeys(string_.Eq)),
+    ).toMatchObject(Option_.none);
   });
 
   it('transpose helper', () => {
@@ -168,9 +168,10 @@ describe('Dict', () => {
       const example2: Example = Dict_.dict(['foo', 3], ['bar', 4]);
 
       const result: Either<'error', Example> = pipe(
-        NonEmptyArray_.cons(example1, [example2]),
+        [example2],
+        Array_.prepend(example1),
         Dict_.mergeSymmetric(
-          eqString,
+          string_.Eq,
           () => 'error' as const,
           (valuevariants: NonEmptyArray<number>): Either<'error', number> =>
             pipe(
@@ -188,9 +189,10 @@ describe('Dict', () => {
       const example2: Example = Dict_.dict(['foo', 3], ['bar', 4]);
 
       const result: Either<'error', Example> = pipe(
-        NonEmptyArray_.cons(example1, [example2]),
+        [example2],
+        Array_.prepend(example1),
         Dict_.mergeSymmetric(
-          eqString,
+          string_.Eq,
           () => 'error' as const,
           (valuevariants: NonEmptyArray<number>): Either<'error', number> =>
             pipe(
@@ -207,9 +209,10 @@ describe('Dict', () => {
       const example2: Example = Dict_.dict(['foo', 3], ['bar', 4], ['quux', 5]);
 
       const result: Either<'error', Example> = pipe(
-        NonEmptyArray_.cons(example1, [example2]),
+        [example2],
+        Array_.prepend(example1),
         Dict_.mergeSymmetric(
-          eqString,
+          string_.Eq,
           () => 'error' as const,
           (valuevariants: NonEmptyArray<number>): Either<'error', number> =>
             pipe(
@@ -226,9 +229,10 @@ describe('Dict', () => {
       const example2: Example = Dict_.dict(['bar', 4], ['foo', 3]);
 
       const result: Either<'error', Example> = pipe(
-        NonEmptyArray_.cons(example1, [example2]),
+        [example2],
+        Array_.prepend(example1),
         Dict_.mergeSymmetric(
-          eqString,
+          string_.Eq,
           () => 'error' as const,
           (valuevariants: NonEmptyArray<number>): Either<'error', number> =>
             pipe(
@@ -247,7 +251,8 @@ describe('Dict', () => {
     const example2: Example = Dict_.dict(['bar', 4], ['foo', 3], ['add', 8]);
 
     const result: Either<'error', Example> = pipe(
-      NonEmptyArray_.cons(example1, [example2]),
+      [example2],
+      Array_.prepend(example1),
       Dict_.mergeAsymmetric(
         (valuevariants: NonEmptyArray<number>): Either<'error', number> =>
           pipe(
