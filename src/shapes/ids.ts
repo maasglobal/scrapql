@@ -60,20 +60,20 @@ export function processQuery<
   I extends Id<any>,
   WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   connect: ExistenceResolverConnector<I, Option<WX>, E, C, W, A>,
   subProcessor: QueryProcessor<SQ, SR, E, Tuple_.Prepend<I, C>, Object_.Merge<W, WX>, A>,
 ): QueryProcessor<Q, IdsResult<Dict<I, Option<SR>>>, E, C, W, A> {
-  return (query: Q) => (
-    context: C,
-    workspace: W,
-  ): ReaderTaskEither<A, E, IdsResult<Dict<I, Option<SR>>>> => {
-    return (resolvers) => {
-      const tasks: Dict<I, TaskEither<E, Option<SR>>> = pipe(
-        query,
-        Dict_.mapWithIndex(
-          (id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
+  return (query: Q) =>
+    (
+      context: C,
+      workspace: W,
+    ): ReaderTaskEither<A, E, IdsResult<Dict<I, Option<SR>>>> => {
+      return (resolvers) => {
+        const tasks: Dict<I, TaskEither<E, Option<SR>>> = pipe(
+          query,
+          Dict_.mapWithIndex((id: I, subQuery: SQ): TaskEither<E, Option<SR>> => {
             const subContext = pipe(context, Tuple_.prepend(id));
             const existenceCheck = connect(resolvers);
             return pipe(
@@ -95,12 +95,11 @@ export function processQuery<
                   ),
               ),
             );
-          },
-        ),
-      );
-      return Dict_.sequenceTaskEither(tasks);
+          }),
+        );
+        return Dict_.sequenceTaskEither(tasks);
+      };
     };
-  };
 }
 
 // ids result contains data that may not exist in database
@@ -110,56 +109,64 @@ export function processResult<
   C extends Context<Array<any>>,
   A extends Reporters<any>,
   I extends Id<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   connect: ExistenceReporterConnector<I, Existence, C, A>,
   subProcessor: ResultProcessor<SR, Tuple_.Prepend<I, C>, A>,
 ): ResultProcessor<R, C, A> {
-  return (result: R) => (context: C): ReaderTask<A, void> => {
-    return (reporters) => {
-      const tasks: Array<Task<void>> = pipe(
-        result,
-        Dict_.mapWithIndex((id: I, maybeSubResult: Option<SR>) => {
-          const subContext = pipe(context, Tuple_.prepend(id));
-          return pipe(
-            maybeSubResult,
-            Option_.fold(
-              () => [connect(reporters)(false, subContext, {})],
-              (subResult) => [
-                connect(reporters)(true, subContext, {}),
-                subProcessor(subResult)(subContext, {})(reporters),
-              ],
-            ),
-          );
-        }),
-        Array_.map(([_k, v]) => v),
-        Array_.flatten,
-      );
-      return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(tasks, identity);
+  return (result: R) =>
+    (context: C): ReaderTask<A, void> => {
+      return (reporters) => {
+        const tasks: Array<Task<void>> = pipe(
+          result,
+          Dict_.mapWithIndex((id: I, maybeSubResult: Option<SR>) => {
+            const subContext = pipe(context, Tuple_.prepend(id));
+            return pipe(
+              maybeSubResult,
+              Option_.fold(
+                () => [connect(reporters)(false, subContext, {})],
+                (subResult) => [
+                  connect(reporters)(true, subContext, {}),
+                  subProcessor(subResult)(subContext, {})(reporters),
+                ],
+              ),
+            );
+          }),
+          Array_.map(([_k, v]) => v),
+          Array_.flatten,
+        );
+        return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(
+          tasks,
+          identity,
+        );
+      };
     };
-  };
 }
 
-export const reduceResult = <I extends Id<string>, SR extends Result<any>>(
-  reduceSubResult: ResultReducer<SR>,
-): ResultReducer<IdsResult<Dict<I, Option<SR>>>> => (results) =>
-  pipe(
-    results,
-    Dict_.mergeAsymmetric(
-      (subResultVariants: NonEmptyArray<Option<SR>>): Either<ReduceFailure, Option<SR>> =>
-        pipe(
-          mergeOption(subResultVariants),
-          Either_.fromOption(() => structuralMismatch('option')),
-          Either_.chain(
-            flow(
-              NonEmptyArray_.sequence(Option_.Applicative),
-              Option_.map((subResultVariants) => reduceSubResult(subResultVariants)),
-              Option_.sequence(Either_.Applicative),
+export const reduceResult =
+  <I extends Id<string>, SR extends Result<any>>(
+    reduceSubResult: ResultReducer<SR>,
+  ): ResultReducer<IdsResult<Dict<I, Option<SR>>>> =>
+  (results) =>
+    pipe(
+      results,
+      Dict_.mergeAsymmetric(
+        (
+          subResultVariants: NonEmptyArray<Option<SR>>,
+        ): Either<ReduceFailure, Option<SR>> =>
+          pipe(
+            mergeOption(subResultVariants),
+            Either_.fromOption(() => structuralMismatch('option')),
+            Either_.chain(
+              flow(
+                NonEmptyArray_.sequence(Option_.Applicative),
+                Option_.map((subResultVariants) => reduceSubResult(subResultVariants)),
+                Option_.sequence(Either_.Applicative),
+              ),
             ),
           ),
-        ),
-    ),
-  );
+      ),
+    );
 
 export function queryExamples<I extends Id<any>, SQ extends Query<any>>(
   ids: Examples<I>,
@@ -193,7 +200,7 @@ export const bundle = <
   I extends Id<string>,
   WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   seed: IdsBundleSeed<E, C, W, QA, RA, I, WX, SQ, SR>,
 ): IdsBundle<E, C, W, QA, RA, I, SQ, SR> =>

@@ -17,7 +17,7 @@ export type Processor<
   O,
   C extends Context<any>,
   W extends Workspace<any>,
-  A extends API<any>
+  A extends API<any>,
 > = (i: I) => (c: C, w: W) => ReaderTask<A, O>;
 
 export type ProcessorInstance<I, O> = (i: I) => Task<O>;

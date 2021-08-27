@@ -176,9 +176,8 @@ describe('NonEmptyList', () => {
       ef: NonEmptyList<EF>;
     };
     const separate: Three = { ab, cd, ef };
-    const combined: NonEmptyList<{ ab: AB; cd: CD; ef: EF }> = NonEmptyList_.sequenceS(
-      separate,
-    );
+    const combined: NonEmptyList<{ ab: AB; cd: CD; ef: EF }> =
+      NonEmptyList_.sequenceS(separate);
     const handle = combined();
     expect(handle.next()).toStrictEqual({
       value: { ab: 'a', cd: 'c', ef: 'e' },

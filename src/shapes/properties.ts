@@ -53,28 +53,26 @@ export function processQuery<
   C extends Context<Array<any>>,
   W extends Workspace<any>,
   A extends Resolvers<any>,
-  R extends PropertiesResult<any>
+  R extends PropertiesResult<any>,
 >(processors: QueryProcessorMapping<Q, R, E, C, W, A>): QueryProcessor<Q, R, E, C, W, A> {
-  return <P extends Property<string> & keyof Q & keyof R>(query: Q) => (
-    context: C,
-    workspace: W,
-  ): ReaderTaskEither<A, E, R> => {
-    return (resolvers) => {
-      const tasks: Record<P, TaskEither<E, R[P]>> = pipe(
-        query,
-        Record_.mapWithIndex((property, subQuery: Q[P]) => {
-          const processor = processors[property];
-          const subResult = processor(subQuery)(context, workspace)(resolvers);
-          return subResult;
-        }),
-      );
-      const result: TaskEither<E, Record<P, R[P]>> = Record_.sequence(
-        TaskEither_.ApplicativePar,
-      )(tasks);
+  return <P extends Property<string> & keyof Q & keyof R>(query: Q) =>
+    (context: C, workspace: W): ReaderTaskEither<A, E, R> => {
+      return (resolvers) => {
+        const tasks: Record<P, TaskEither<E, R[P]>> = pipe(
+          query,
+          Record_.mapWithIndex((property, subQuery: Q[P]) => {
+            const processor = processors[property];
+            const subResult = processor(subQuery)(context, workspace)(resolvers);
+            return subResult;
+          }),
+        );
+        const result: TaskEither<E, Record<P, R[P]>> = Record_.sequence(
+          TaskEither_.ApplicativePar,
+        )(tasks);
 
-      return result as TaskEither<E, R>;
+        return result as TaskEither<E, R>;
+      };
     };
-  };
 }
 
 // properties result contains results for a set of optional queries
@@ -82,62 +80,66 @@ export function processQuery<
 export function processResult<
   R extends PropertiesResult<any>,
   C extends Context<Array<any>>,
-  A extends Reporters<any>
+  A extends Reporters<any>,
 >(processors: ResultProcessorMapping<R, C, A>): ResultProcessor<R, C, A> {
-  return <P extends Property<string> & keyof R>(result: R) => (
-    context: C,
-  ): ReaderTask<A, void> => {
-    return (reporters): Task<void> => {
-      const taskRecord: Record<P, Task<void>> = pipe(
-        result,
-        Record_.mapWithIndex((property, subResult: R[P]) => {
-          const processor = processors[property];
-          return processor(subResult)(context, {})(reporters);
-        }),
-      );
-      const tasks: Array<Task<void>> = pipe(
-        taskRecord,
-        Record_.toUnfoldable(Array_.Unfoldable),
-        Array_.map(([_k, v]) => v),
-      );
-      return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(tasks, identity);
+  return <P extends Property<string> & keyof R>(result: R) =>
+    (context: C): ReaderTask<A, void> => {
+      return (reporters): Task<void> => {
+        const taskRecord: Record<P, Task<void>> = pipe(
+          result,
+          Record_.mapWithIndex((property, subResult: R[P]) => {
+            const processor = processors[property];
+            return processor(subResult)(context, {})(reporters);
+          }),
+        );
+        const tasks: Array<Task<void>> = pipe(
+          taskRecord,
+          Record_.toUnfoldable(Array_.Unfoldable),
+          Array_.map(([_k, v]) => v),
+        );
+        return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(
+          tasks,
+          identity,
+        );
+      };
     };
-  };
 }
 
-export const reduceResult = <R extends PropertiesResult<any>>(
-  processors: ResultReducerMapping<R>,
-): ResultReducer<R> => <P extends Property<string> & keyof R>(
-  results: NonEmptyArray<R>,
-): Either<ReduceFailure, R> => {
-  const result: Either<ReduceFailure, Record<P, R[P]>> = pipe(
-    NonEmptyArray_.head(results),
-    Record_.mapWithIndex<P, unknown, Either<ReduceFailure, R[P]>>(
-      (propName: P): Either<ReduceFailure, R[P]> => {
-        const propReducer: ResultReducer<R[P]> = processors[propName];
-        return pipe(
-          results,
-          NonEmptyArray_.map((r: R): R[P] => r[propName]),
-          propReducer,
-          (x: Either<ReduceFailure, R[P]>) => x,
-        );
-      },
-    ),
-    Record_.sequence(Either_.Applicative),
-  );
-  return result as Either<ReduceFailure, R>;
-};
+export const reduceResult =
+  <R extends PropertiesResult<any>>(
+    processors: ResultReducerMapping<R>,
+  ): ResultReducer<R> =>
+  <P extends Property<string> & keyof R>(
+    results: NonEmptyArray<R>,
+  ): Either<ReduceFailure, R> => {
+    const result: Either<ReduceFailure, Record<P, R[P]>> = pipe(
+      NonEmptyArray_.head(results),
+      Record_.mapWithIndex<P, unknown, Either<ReduceFailure, R[P]>>(
+        (propName: P): Either<ReduceFailure, R[P]> => {
+          const propReducer: ResultReducer<R[P]> = processors[propName];
+          return pipe(
+            results,
+            NonEmptyArray_.map((r: R): R[P] => r[propName]),
+            propReducer,
+            (x: Either<ReduceFailure, R[P]>) => x,
+          );
+        },
+      ),
+      Record_.sequence(Either_.Applicative),
+    );
+    return result as Either<ReduceFailure, R>;
+  };
 
 export function queryExamples<
   P extends Property<string>,
-  Q extends PropertiesQuery<{ [I in P]: Query<any> }>
+  Q extends PropertiesQuery<{ [I in P]: Query<any> }>,
 >(subQueries: QueryExamplesMapping<P, Q>): Examples<Q> {
   return NonEmptyList_.sequenceS(subQueries) as Examples<Q>;
 }
 
 export function resultExamples<
   P extends Property<string>,
-  R extends PropertiesResult<{ [I in P]: Result<any> }>
+  R extends PropertiesResult<{ [I in P]: Result<any> }>,
 >(subResults: ResultExamplesMapping<P, R>): Examples<R> {
   return NonEmptyList_.sequenceS(subResults) as Examples<R>;
 }
