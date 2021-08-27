@@ -40,11 +40,12 @@ export function processQuery<
   W extends Workspace<any>,
   A extends Resolvers<any>,
   QP extends LiteralQueryPayload<string>,
-  RP extends LiteralResultPayload<string>
+  RP extends LiteralResultPayload<string>,
 >(r: RP): QueryProcessor<Q, LiteralResult<QP, RP>, E, C, W, A> {
-  return ({ q }: Q) => (_context: C): ReaderTaskEither<A, E, LiteralResult<QP, RP>> => {
-    return (_resolvers) => TaskEither_.right({ q, r });
-  };
+  return ({ q }: Q) =>
+    (_context: C): ReaderTaskEither<A, E, LiteralResult<QP, RP>> => {
+      return (_resolvers) => TaskEither_.right({ q, r });
+    };
 }
 
 // literal result is known on forehand so we throw it away
@@ -52,11 +53,12 @@ export function processQuery<
 export function processResult<
   R extends LiteralResult<any, any>,
   C extends Context<Array<any>>,
-  A extends Reporters<any>
+  A extends Reporters<any>,
 >(): ResultProcessor<R, C, A> {
-  return (_result: R) => (_context: C): ReaderTask<A, void> => {
-    return (_reporters) => Task_.of(undefined);
-  };
+  return (_result: R) =>
+    (_context: C): ReaderTask<A, void> => {
+      return (_reporters) => Task_.of(undefined);
+    };
 }
 
 export const reduceResult = <L extends LiteralResult<any, any>>(
@@ -98,7 +100,7 @@ export const bundle = <
   QA extends Resolvers<any>,
   RA extends Reporters<any>,
   QP extends LiteralQueryPayload<string>,
-  RP extends LiteralResultPayload<string>
+  RP extends LiteralResultPayload<string>,
 >(
   seed: LiteralBundleSeed<E, QP, RP>,
 ): LiteralBundle<E, C, W, QA, RA, QP, RP> =>

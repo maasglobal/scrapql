@@ -46,26 +46,22 @@ export function processQuery<
   A extends Resolvers<any>,
   K extends Key<any>,
   SQ extends Query<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   subProcessor: QueryProcessor<SQ, SR, E, Tuple_.Prepend<K, C>, W, A>,
 ): QueryProcessor<Q, KeysResult<Dict<K, SR>>, E, C, W, A> {
-  return (query: Q) => (
-    context: C,
-    workspace: W,
-  ): ReaderTaskEither<A, E, KeysResult<Dict<K, SR>>> => {
-    return (resolvers) =>
-      pipe(
-        query,
-        Dict_.mapWithIndex(
-          (key: K, subQuery: SQ): TaskEither<E, SR> => {
+  return (query: Q) =>
+    (context: C, workspace: W): ReaderTaskEither<A, E, KeysResult<Dict<K, SR>>> => {
+      return (resolvers) =>
+        pipe(
+          query,
+          Dict_.mapWithIndex((key: K, subQuery: SQ): TaskEither<E, SR> => {
             const subContext = pipe(context, Tuple_.prepend(key));
             return subProcessor(subQuery)(subContext, workspace)(resolvers);
-          },
-        ),
-        Dict_.sequenceTaskEither,
-      );
-  };
+          }),
+          Dict_.sequenceTaskEither,
+        );
+    };
 }
 
 // keys result contains data that always exists in database
@@ -75,33 +71,39 @@ export function processResult<
   C extends Context<Array<any>>,
   A extends Reporters<any>,
   K extends Key<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(subProcessor: ResultProcessor<SR, Tuple_.Prepend<K, C>, A>): ResultProcessor<R, C, A> {
-  return (result: R) => (context: C): ReaderTask<A, void> => {
-    return (reporters): Task<void> => {
-      const tasks: Array<Task<void>> = pipe(
-        result,
-        Dict_.mapWithIndex((key: K, subResult: SR) => {
-          const subContext = pipe(context, Tuple_.prepend(key));
-          return subProcessor(subResult)(subContext, {})(reporters);
-        }),
-        Array_.map(([_k, v]) => v),
-      );
-      return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(tasks, identity);
+  return (result: R) =>
+    (context: C): ReaderTask<A, void> => {
+      return (reporters): Task<void> => {
+        const tasks: Array<Task<void>> = pipe(
+          result,
+          Dict_.mapWithIndex((key: K, subResult: SR) => {
+            const subContext = pipe(context, Tuple_.prepend(key));
+            return subProcessor(subResult)(subContext, {})(reporters);
+          }),
+          Array_.map(([_k, v]) => v),
+        );
+        return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(
+          tasks,
+          identity,
+        );
+      };
     };
-  };
 }
 
-export const reduceResult = <K extends Key<string>, SR extends Result<any>>(
-  reduceSubResult: ResultReducer<SR>,
-): ResultReducer<KeysResult<Dict<K, SR>>> => (results) =>
-  pipe(
-    results,
-    Dict_.mergeAsymmetric(
-      (subResultVariants: NonEmptyArray<SR>): Either<ReduceFailure, SR> =>
-        reduceSubResult(subResultVariants),
-    ),
-  );
+export const reduceResult =
+  <K extends Key<string>, SR extends Result<any>>(
+    reduceSubResult: ResultReducer<SR>,
+  ): ResultReducer<KeysResult<Dict<K, SR>>> =>
+  (results) =>
+    pipe(
+      results,
+      Dict_.mergeAsymmetric(
+        (subResultVariants: NonEmptyArray<SR>): Either<ReduceFailure, SR> =>
+          reduceSubResult(subResultVariants),
+      ),
+    );
 
 export function queryExamples<K extends Key<any>, SQ extends Query<any>>(
   keys: Examples<K>,
@@ -133,7 +135,7 @@ export const bundle = <
   RA extends Reporters<any>,
   K extends Key<string>,
   SQ extends Query<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   seed: KeysBundleSeed<E, C, W, QA, RA, K, SQ, SR>,
 ): KeysBundle<E, C, W, QA, RA, K, SQ, SR> =>

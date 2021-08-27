@@ -52,20 +52,20 @@ export function processQuery<
   I extends Id<any>,
   WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   connect: TermsResolverConnector<T, Dict<I, WX>, E, C, W, A>,
   subProcessor: QueryProcessor<SQ, SR, E, Tuple_.Prepend<I, C>, Object_.Merge<W, WX>, A>,
 ): QueryProcessor<Q, SearchResult<Dict<T, Dict<I, SR>>>, E, C, W, A> {
-  return (query: Q) => (
-    context: C,
-    workspace: W,
-  ): ReaderTaskEither<A, E, SearchResult<Dict<T, Dict<I, SR>>>> => {
-    return (resolvers) => {
-      const tasks: Dict<T, TaskEither<E, Dict<I, SR>>> = pipe(
-        query,
-        Dict_.mapWithIndex(
-          (terms: T, subQuery: SQ): TaskEither<E, Dict<I, SR>> => {
+  return (query: Q) =>
+    (
+      context: C,
+      workspace: W,
+    ): ReaderTaskEither<A, E, SearchResult<Dict<T, Dict<I, SR>>>> => {
+      return (resolvers) => {
+        const tasks: Dict<T, TaskEither<E, Dict<I, SR>>> = pipe(
+          query,
+          Dict_.mapWithIndex((terms: T, subQuery: SQ): TaskEither<E, Dict<I, SR>> => {
             const idResolver = connect(resolvers);
             return pipe(
               idResolver(terms, context, workspace),
@@ -85,12 +85,11 @@ export function processQuery<
                   ),
               ),
             );
-          },
-        ),
-      );
-      return Dict_.sequenceTaskEither(tasks);
+          }),
+        );
+        return Dict_.sequenceTaskEither(tasks);
+      };
     };
-  };
 }
 
 // search result contains data that may contain zero or more instances in the database
@@ -101,17 +100,17 @@ export function processResult<
   A extends Reporters<any>,
   T extends Terms<any>,
   I extends Id<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   connect: TermsReporterConnector<T, Array<I>, C, A>,
   subProcessor: ResultProcessor<SR, Tuple_.Prepend<I, C>, A>,
 ): ResultProcessor<R, C, A> {
-  return (result: R) => (context: C): ReaderTask<A, void> => {
-    return (reporters): Task<void> => {
-      const tasks: Array<Task<void>> = pipe(
-        result,
-        Dict_.mapWithIndex(
-          (terms: T, subResults: Dict<I, SR>): Array<Task<void>> => {
+  return (result: R) =>
+    (context: C): ReaderTask<A, void> => {
+      return (reporters): Task<void> => {
+        const tasks: Array<Task<void>> = pipe(
+          result,
+          Dict_.mapWithIndex((terms: T, subResults: Dict<I, SR>): Array<Task<void>> => {
             const termsContext = pipe(context, Tuple_.prepend(terms));
             const reportIds: Task<void> = pipe(
               Dict_.keys(subResults),
@@ -125,33 +124,33 @@ export function processResult<
               }),
             );
             return pipe([[reportIds], reportResults], Array_.flatten);
-          },
-        ),
-        (x: Dict<T, Array<Task<void>>>) => x,
-        Array_.map(([_k, v]) => v),
-        Array_.flatten,
-      );
-      return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(tasks, identity);
+          }),
+          (x: Dict<T, Array<Task<void>>>) => x,
+          Array_.map(([_k, v]) => v),
+          Array_.flatten,
+        );
+        return Foldable_.traverse_(Task_.ApplicativeSeq, Array_.Foldable)(
+          tasks,
+          identity,
+        );
+      };
     };
-  };
 }
 
-export const reduceResult = <
-  T extends Terms<any>,
-  I extends Id<string>,
-  SR extends Result<any>
->(
-  termEq: Eq<T>,
-  reduceSubResult: ResultReducer<SR>,
-): ResultReducer<SearchResult<Dict<T, Dict<I, SR>>>> => (results) =>
-  pipe(
-    results,
-    Dict_.mergeSymmetric(
-      termEq,
-      () => structuralMismatch('terms'),
-      Dict_.mergeAsymmetric(reduceSubResult),
-    ),
-  );
+export const reduceResult =
+  <T extends Terms<any>, I extends Id<string>, SR extends Result<any>>(
+    termEq: Eq<T>,
+    reduceSubResult: ResultReducer<SR>,
+  ): ResultReducer<SearchResult<Dict<T, Dict<I, SR>>>> =>
+  (results) =>
+    pipe(
+      results,
+      Dict_.mergeSymmetric(
+        termEq,
+        () => structuralMismatch('terms'),
+        Dict_.mergeAsymmetric(reduceSubResult),
+      ),
+    );
 
 export function queryExamples<T extends Terms<any>, SQ extends Result<any>>(
   searches: Examples<T>,
@@ -166,7 +165,7 @@ export function queryExamples<T extends Terms<any>, SQ extends Result<any>>(
 export function resultExamples<
   T extends Terms<any>,
   I extends Id<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   termss: Examples<T>,
   ids: Examples<I>,
@@ -191,7 +190,7 @@ export const bundle = <
   I extends Id<string>,
   WX extends Workspace<Object_.Object>,
   SQ extends Query<any>,
-  SR extends Result<any>
+  SR extends Result<any>,
 >(
   seed: SearchBundleSeed<E, C, W, QA, RA, T, I, WX, SQ, SR>,
 ): SearchBundle<E, C, W, QA, RA, T, I, SQ, SR> =>

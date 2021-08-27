@@ -24,9 +24,11 @@ type LoggerTask<R, A extends Array<any>> = {
 };
 
 function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R, A> {
-  const lt: LoggerTask<R, A> = (...largs) => () => {
-    return Promise.resolve(logger(...largs));
-  };
+  const lt: LoggerTask<R, A> =
+    (...largs) =>
+    () => {
+      return Promise.resolve(logger(...largs));
+    };
   // eslint-disable-next-line fp/no-mutation
   lt.mock = logger.mock;
   return lt;
@@ -103,7 +105,7 @@ describe('query', () => {
     Q,
     R,
     C extends scrapql.Context<Array<any>>,
-    W extends scrapql.Workspace<any>
+    W extends scrapql.Workspace<any>,
   > = scrapql.QueryProcessor<Q, R, Err1, C, W, Resolvers>;
 
   const QUERY = `${name}/${version}/scrapql/test/query`;
@@ -216,12 +218,8 @@ describe('query', () => {
     [id1, keysQuery],
     [id2, keysQuery],
   ];
-  const processProperty1: CustomQP<
-    Property1Query,
-    Property1Result,
-    Ctx0,
-    Wsp0
-  > = scrapql.ids.processQuery((r) => r.checkProperty1Existence, processKeys1);
+  const processProperty1: CustomQP<Property1Query, Property1Result, Ctx0, Wsp0> =
+    scrapql.ids.processQuery((r) => r.checkProperty1Existence, processKeys1);
 
   it('processProperty1', async () => {
     const resolvers = createResolvers();
@@ -344,17 +342,13 @@ describe('query', () => {
   };
 
   it('processRoot (composed)', async () => {
-    const processRoot: CustomQP<
-      RootQuery,
-      RootResult,
-      Ctx0,
-      Wsp0
-    > = scrapql.properties.processQuery({
-      protocol: scrapql.literal.processQuery(RESULT),
-      property1: processProperty1,
-      property2: processProperty2,
-      property3: processProperty3,
-    });
+    const processRoot: CustomQP<RootQuery, RootResult, Ctx0, Wsp0> =
+      scrapql.properties.processQuery({
+        protocol: scrapql.literal.processQuery(RESULT),
+        property1: processProperty1,
+        property2: processProperty2,
+        property3: processProperty3,
+      });
 
     const resolvers = createResolvers();
     const context: Ctx0 = ctx0;

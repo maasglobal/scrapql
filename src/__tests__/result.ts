@@ -17,9 +17,11 @@ type LoggerTask<R, A extends Array<any>> = {
 };
 
 function loggerTask<R, A extends Array<any>>(logger: Logger<R, A>): LoggerTask<R, A> {
-  const lt: LoggerTask<R, A> = (...largs) => () => {
-    return Promise.resolve(logger(...largs));
-  };
+  const lt: LoggerTask<R, A> =
+    (...largs) =>
+    () => {
+      return Promise.resolve(logger(...largs));
+    };
   // eslint-disable-next-line fp/no-mutation
   lt.mock = logger.mock;
   return lt;
