@@ -10,4 +10,6 @@ module.exports = {
     '^.+\\.(t|j)sx?$': 'ts-jest',
   },
   roots: ['src'],
+  collectCoverage: true,
+  collectCoverageFrom: ['src/**/*.ts'],
 };
