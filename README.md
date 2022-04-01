@@ -268,14 +268,14 @@ You can use the query validator to validate JSON queries as follows.
 import { validator } from 'io-ts-validator';
 
 const rawQuery: Json = {
-  protocol: QUERY_PROTOCOL,
+  protocol: { q: QUERY_PROTOCOL },
   reports: [
-    [2018, {get: true}],
-    [3030, {get: true}],
+    ['2018', {get: { q: true } }],
+    ['3030', {get: { q: true } }],
   ],
   customers: [
-    ['c002', {get: true}],
-    ['c007', {get: true}],
+    ['c002', {get: { q: true } }],
+    ['c007', {get: { q: true } }],
   ],
 };
 
@@ -329,42 +329,36 @@ The result object should look as follows.
 
 ```typescript
 const rawResult: Json = {
-  protocol: 'scrapql-example-app/0.0.1/scrapql/result',
+  protocol: { q: QUERY_PROTOCOL, r: RESULT_PROTOCOL },
   reports: [
-    [2018, {
+    ['2018', {
       get: {
-        _tag: 'Right',  // get success
-        right: { profit: 100 }
+        q: true,
+        r: { profit: 100 },
       },
     }],
-    [3030, {
+    ['3030', {
       get: {
-        _tag: 'Right',  // get success
-        right: { profit: 0 }
+        q: true,
+        r: { profit: 0 },
       },
     }],
   ],
   customers: [
     ['c002', {
-      _tag: 'Right',  // identity check success
-      right: {
-        _tag: 'Some',  // customer exists
-        some: {
-          get: {
-            _tag: 'Right',  // get success
-            right: {
-              name: 'Magica De Spell',
-              age: '35',
-            },
+      _tag: 'Some',  // customer exists
+      value: {
+        get: {
+          q: true,
+          r: {
+            name: 'Magica De Spell',
+            age: 35,
           },
         },
       },
     }],
     ['c007', {
-      _tag: 'Right',  // identity check success
-      right: {
-        _tag: 'None',  // customer does not exist
-      },
+      _tag: 'None',  // customer does not exist
     }],
   ],
 };
@@ -426,6 +420,7 @@ type Response<E, D> = P.Either<E, D>
 ```typescript
 import * as Console_ from 'fp-ts/lib/Console';
 
+type RPC = (input: string) => Promise<string>
 
 async function server(request: string): Promise<string> {
   const main = P.pipe(
@@ -454,14 +449,14 @@ async function server(request: string): Promise<string> {
   return ruins.fromTaskEither(main);
 }
 
-async function client(query: Query): Promise<void> {
+async function client(query: Query, rpc: RPC = server): Promise<void> {
   const main = P.pipe(
     // encode request
     validator(Request(Query), 'json').encodeEither(query),
     P.TaskEither_.fromEither,
     // call server
     P.TaskEither_.chain((request) => P.pipe(
-      P.TaskEither_.tryCatch(() => server(request), (reason) => [String(reason)]),
+      P.TaskEither_.tryCatch(() => rpc(request), (reason) => [String(reason)]),
     )),
     // validate response
     P.TaskEither_.chainEitherK((body: string) =>
