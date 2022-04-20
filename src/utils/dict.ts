@@ -1,5 +1,4 @@
-import { sequenceT } from 'fp-ts/lib/Apply';
-import { sequenceS } from 'fp-ts/lib/Apply';
+import { sequenceS, sequenceT } from 'fp-ts/lib/Apply';
 import * as Array_ from 'fp-ts/lib/Array';
 import * as boolean_ from 'fp-ts/lib/boolean';
 import { Either } from 'fp-ts/lib/Either';

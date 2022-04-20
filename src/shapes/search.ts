@@ -1,8 +1,7 @@
 import * as Array_ from 'fp-ts/lib/Array';
 import { Eq } from 'fp-ts/lib/Eq';
 import * as Foldable_ from 'fp-ts/lib/Foldable';
-import { identity } from 'fp-ts/lib/function';
-import { pipe } from 'fp-ts/lib/function';
+import { identity, pipe } from 'fp-ts/lib/function';
 import { ReaderTask } from 'fp-ts/lib/ReaderTask';
 import { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 import { Task } from 'fp-ts/lib/Task';
