@@ -1,4 +1,3 @@
-
 # ScrapQL
 
 The design of ScrapQL was partially motivated by experimentation with GraphQL. One key idea behind GraphQL is that the requirements for an API can not be known on forehand and therefore it is a good idea to create a general API that lets the caller be in control of things. Since we don't know which type sytem the caller will be using GraphQL implements it's own type system in GraphQL Schema language specifically created for the purpose. Because of the generality of the interface the types are also necessary for describing relations between different data items. GraphQL is also designed to avoid costly roundtrips between the application and the server room. The application sends "an order" for various "items" and the server takes care of collecting those items before returning them all at once to the application.
@@ -8,7 +7,7 @@ ScrapQL bears some resemblance to GraphQL but is also quite different. ScrapQL a
 # Tutorial
 
 In this tutorial we explain how you can use ScrapQL in a simple project with
-customers and profit reports.  We will use the following database mock
+customers and profit reports. We will use the following database mock
 throughout the tutorial.
 
 ```typescript
@@ -36,16 +35,10 @@ const example: any = {
   },
 };
 
-type Json =
-    | string
-    | number
-    | boolean
-    | null
-    | { [p: string]: Json }
-    | Array<Json>;
+type Json = string | number | boolean | null | { [p: string]: Json } | Array<Json>;
 
 interface Database {
-  getCustomer: (c: string) => Promise<undefined|Json>;
+  getCustomer: (c: string) => Promise<undefined | Json>;
   getReport: (y: string) => Promise<Json>;
 }
 
@@ -81,7 +74,6 @@ type Report = t.TypeOf<typeof Report>;
 ## Define Query Driver
 
 ```typescript
-
 import { Ctx, Ctx0, Wsp, Wsp0, Existence } from 'scrapql';
 import * as scrapql from 'scrapql';
 
@@ -91,33 +83,38 @@ import * as P from 'maasglobal-prelude-ts';
 const Err = t.array(t.string);
 type Err = t.TypeOf<typeof Err>;
 
-const Get = t.literal(true)
+const Get = t.literal(true);
 type Get = t.TypeOf<typeof Get>;
 
 type Resolvers = scrapql.Resolvers<{
   readonly fetchReport: (a: Get, b: Ctx<[Year]>) => P.TaskEither<Err, Report>;
-  readonly fetchCustomer: (a: Get, b: Ctx<[CustomerId]>, c: { customer: Customer }) => P.TaskEither<Err, Customer>;
-  readonly checkCustomerExistence: (a: CustomerId) => P.TaskEither<Err, P.Option<{ customer: Customer }>>;
-}>
+  readonly fetchCustomer: (
+    a: Get,
+    b: Ctx<[CustomerId]>,
+    c: { customer: Customer },
+  ) => P.TaskEither<Err, Customer>;
+  readonly checkCustomerExistence: (
+    a: CustomerId,
+  ) => P.TaskEither<Err, P.Option<{ customer: Customer }>>;
+}>;
 
 type Reporters = scrapql.Reporters<{
-  readonly receiveReport: (a: Report, b: Ctx<[Get, Year]> ) => P.Task<void>;
+  readonly receiveReport: (a: Report, b: Ctx<[Get, Year]>) => P.Task<void>;
   readonly receiveCustomer: (a: Customer, b: Ctx<[Get, CustomerId]>) => P.Task<void>;
   readonly learnCustomerExistence: (a: Existence, b: Ctx<[CustomerId]>) => P.Task<void>;
-}>
+}>;
 
-type Driver = Resolvers & Reporters
+type Driver = Resolvers & Reporters;
 ```
 
 ## Define Query Literals
 
 ```typescript
-
 // name and version from package.json
 const packageName = 'scrapql-example-app';
 const packageVersion = '0.0.1';
 
-const QUERY_PROTOCOL= `${packageName}/${packageVersion}/scrapql/query`;
+const QUERY_PROTOCOL = `${packageName}/${packageVersion}/scrapql/query`;
 const RESULT_PROTOCOL = `${packageName}/${packageVersion}/scrapql/result`;
 
 type Version = scrapql.LiteralBundle<
@@ -157,10 +154,12 @@ const GetCustomer: GetCustomer = scrapql.leaf.bundle({
   queryPayloadExamplesArray: [Get.value],
   resultConnector: (r: Reporters) => r.receiveCustomer,
   resultPayloadCombiner: (_w, r) => P.Either_.right(r),
-  resultPayloadExamplesArray: [{
+  resultPayloadExamplesArray: [
+    {
       name: 'Scrooge McDuck',
       age: 75,
-    }],
+    },
+  ],
 });
 
 type GetReport = scrapql.LeafBundle<
@@ -181,9 +180,11 @@ const GetReport: GetReport = scrapql.leaf.bundle({
   queryPayloadExamplesArray: [Get.value],
   resultConnector: (r: Reporters) => r.receiveReport,
   resultPayloadCombiner: (_w, r) => P.Either_.right(r),
-  resultPayloadExamplesArray: [{
-    profit: 500,
-  }],
+  resultPayloadExamplesArray: [
+    {
+      profit: 500,
+    },
+  ],
 });
 ```
 
@@ -217,7 +218,6 @@ const Customers: Customers = scrapql.ids.bundle({
   resultConnector: (r: Reporters) => r.learnCustomerExistence,
 });
 
-
 type ReportOps = scrapql.PropertiesBundle<{
   get: GetReport;
 }>;
@@ -244,9 +244,9 @@ const Reports: Reports = scrapql.keys.bundle({
 });
 
 type Root = scrapql.PropertiesBundle<{
-  protocol: Version,
-  reports: Reports,
-  customers: Customers,
+  protocol: Version;
+  reports: Reports;
+  customers: Customers;
 }>;
 const Root: Root = scrapql.properties.bundle({
   protocol: Version,
@@ -259,7 +259,6 @@ type Query = t.TypeOf<typeof Query>;
 
 const Result = Root.Result;
 type Result = t.TypeOf<typeof Result>;
-
 ```
 
 You can use the query validator to validate JSON queries as follows.
@@ -270,12 +269,12 @@ import { validator } from 'io-ts-validator';
 const rawQuery: Json = {
   protocol: { q: QUERY_PROTOCOL },
   reports: [
-    ['2018', {get: { q: true } }],
-    ['3030', {get: { q: true } }],
+    ['2018', { get: { q: true } }],
+    ['3030', { get: { q: true } }],
   ],
   customers: [
-    ['c002', {get: { q: true } }],
-    ['c007', {get: { q: true } }],
+    ['c002', { get: { q: true } }],
+    ['c007', { get: { q: true } }],
   ],
 };
 
@@ -287,26 +286,27 @@ const wireQuery: string = validator(Query, 'json').encodeSync(exampleQuery);
 
 ```typescript
 const resolvers: Resolvers = {
-  fetchReport: (_queryArgs, [year]) => P.pipe(
-    () => db.getReport(year),
-    P.Task_.map(validator(Report).decodeEither),
-  ),
+  fetchReport: (_queryArgs, [year]) =>
+    P.pipe(() => db.getReport(year), P.Task_.map(validator(Report).decodeEither)),
 
-  fetchCustomer: (_queryArgs, [_customerId], { customer }) => P.pipe(
-    customer,  // cached by checkCustomerExistence
-    P.TaskEither_.right,
-  ),
+  fetchCustomer: (_queryArgs, [_customerId], { customer }) =>
+    P.pipe(
+      customer, // cached by checkCustomerExistence
+      P.TaskEither_.right,
+    ),
 
-  checkCustomerExistence: (customerId) => P.pipe(
-    () => db.getCustomer(customerId),
-    P.Task_.map((nullable) => P.pipe(
-      P.Option_.fromNullable(nullable),
-      P.Option_.map(validator(Customer).decodeEither),
-      P.Option_.map(P.Either_.map((customer) => ({ customer }))),
-      P.Option_.sequence(P.Either_.Applicative),
-    )),
-  ),
-
+  checkCustomerExistence: (customerId) =>
+    P.pipe(
+      () => db.getCustomer(customerId),
+      P.Task_.map((nullable) =>
+        P.pipe(
+          P.Option_.fromNullable(nullable),
+          P.Option_.map(validator(Customer).decodeEither),
+          P.Option_.map(P.Either_.map((customer) => ({ customer }))),
+          P.Option_.sequence(P.Either_.Applicative),
+        ),
+      ),
+    ),
 };
 ```
 
@@ -331,35 +331,47 @@ The result object should look as follows.
 const rawResult: Json = {
   protocol: { q: QUERY_PROTOCOL, r: RESULT_PROTOCOL },
   reports: [
-    ['2018', {
-      get: {
-        q: true,
-        r: { profit: 100 },
-      },
-    }],
-    ['3030', {
-      get: {
-        q: true,
-        r: { profit: 0 },
-      },
-    }],
-  ],
-  customers: [
-    ['c002', {
-      _tag: 'Some',  // customer exists
-      value: {
+    [
+      '2018',
+      {
         get: {
           q: true,
-          r: {
-            name: 'Magica De Spell',
-            age: 35,
+          r: { profit: 100 },
+        },
+      },
+    ],
+    [
+      '3030',
+      {
+        get: {
+          q: true,
+          r: { profit: 0 },
+        },
+      },
+    ],
+  ],
+  customers: [
+    [
+      'c002',
+      {
+        _tag: 'Some', // customer exists
+        value: {
+          get: {
+            q: true,
+            r: {
+              name: 'Magica De Spell',
+              age: 35,
+            },
           },
         },
       },
-    }],
-    ['c007', {
-      _tag: 'None',  // customer does not exist
-    }],
+    ],
+    [
+      'c007',
+      {
+        _tag: 'None', // customer does not exist
+      },
+    ],
   ],
 };
 ```
@@ -387,19 +399,25 @@ async function wireQueryProcessor(input: string): Promise<string> {
 
 ```typescript
 const reporters: Reporters = {
+  receiveReport:
+    (report, [_query, year]) =>
+    () => {
+      return Promise.resolve(console.log(year, report));
+    },
 
-  receiveReport: (report, [_query, year]) => () => {
-    return Promise.resolve(console.log(year, report));
-  },
+  receiveCustomer:
+    (customer, [_query, customerId]) =>
+    () => {
+      return Promise.resolve(console.log(customerId, customer));
+    },
 
-  receiveCustomer: (customer, [_query, customerId]) => () => {
-    return Promise.resolve(console.log(customerId, customer));
-  },
-
-  learnCustomerExistence: (existence, [customerId]) => () => {
-    return Promise.resolve(console.log(customerId, existence ? 'known customer' : 'unknown customer'));
-  },
-
+  learnCustomerExistence:
+    (existence, [customerId]) =>
+    () => {
+      return Promise.resolve(
+        console.log(customerId, existence ? 'known customer' : 'unknown customer'),
+      );
+    },
 };
 ```
 
@@ -408,11 +426,11 @@ const reporters: Reporters = {
 ```typescript
 import { either as tEither } from 'io-ts-types/lib/either';
 
-const Request = <D extends t.Mixed>(DataC: D) => DataC
-type Request<D> = D
+const Request = <D extends t.Mixed>(DataC: D) => DataC;
+type Request<D> = D;
 
-const Response = tEither
-type Response<E, D> = P.Either<E, D>
+const Response = tEither;
+type Response<E, D> = P.Either<E, D>;
 ```
 
 ## Implement Client and Server
@@ -420,7 +438,7 @@ type Response<E, D> = P.Either<E, D>
 ```typescript
 import * as Console_ from 'fp-ts/lib/Console';
 
-type RPC = (input: string) => Promise<string>
+type RPC = (input: string) => Promise<string>;
 
 async function server(request: string): Promise<string> {
   const main = P.pipe(
@@ -428,22 +446,23 @@ async function server(request: string): Promise<string> {
     validator(Request(Query), 'json').decodeEither(request),
     P.TaskEither_.fromEither,
     // process query
-    P.TaskEither_.chain((query: Query) => P.pipe(
-      query,
-      scrapql.processQuery(Root, resolvers),
-    )),
+    P.TaskEither_.chain((query: Query) =>
+      P.pipe(query, scrapql.processQuery(Root, resolvers)),
+    ),
     // log status
-    P.Task_.chainFirst((response: Response<Err, Result>) => P.pipe(
-      response,
-      P.Either_.fold(
-        (errors) => Console_.error(['Error!'].concat(errors).join('\n')),
-        (_output) => Console_.log('Success!'),
+    P.Task_.chainFirst((response: Response<Err, Result>) =>
+      P.pipe(
+        response,
+        P.Either_.fold(
+          (errors) => Console_.error(['Error!'].concat(errors).join('\n')),
+          (_output) => Console_.log('Success!'),
+        ),
+        P.Task_.fromIO,
       ),
-      P.Task_.fromIO,
-    )),
+    ),
     // encode response
-    P.Task_.map((response: Response<Err, Result>) => 
-      validator(Response(Err, Result), 'json').encodeEither(response)
+    P.Task_.map((response: Response<Err, Result>) =>
+      validator(Response(Err, Result), 'json').encodeEither(response),
     ),
   );
   return ruins.fromTaskEither(main);
@@ -455,9 +474,14 @@ async function client(query: Query, rpc: RPC = server): Promise<void> {
     validator(Request(Query), 'json').encodeEither(query),
     P.TaskEither_.fromEither,
     // call server
-    P.TaskEither_.chain((request) => P.pipe(
-      P.TaskEither_.tryCatch(() => rpc(request), (reason) => [String(reason)]),
-    )),
+    P.TaskEither_.chain((request) =>
+      P.pipe(
+        P.TaskEither_.tryCatch(
+          () => rpc(request),
+          (reason) => [String(reason)],
+        ),
+      ),
+    ),
     // validate response
     P.TaskEither_.chainEitherK((body: string) =>
       validator(Response(Err, Result), 'json').decodeEither(body),
@@ -465,11 +489,9 @@ async function client(query: Query, rpc: RPC = server): Promise<void> {
     // acknowledge server-side errors
     P.TaskEither_.chain((response: Response<Err, Result>) => P.Task_.of(response)),
     // process result
-    P.TaskEither_.chain((result: Result) => P.pipe(
-      result,
-      scrapql.processResult( Root, reporters ),
-      P.TaskEither_.fromTask,
-    )),
+    P.TaskEither_.chain((result: Result) =>
+      P.pipe(result, scrapql.processResult(Root, reporters), P.TaskEither_.fromTask),
+    ),
   );
   return ruins.fromTaskEither(main);
 }
